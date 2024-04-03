@@ -24,31 +24,92 @@ public class TestController : MonoBehaviour
     [SerializeField]
     private float groundCheckTolerance = 0.015f;
 
+    [SerializeField]
+    private float slideDownMultiplier = 5f;
+
     private float groundCheckRadius = 0f;
+    private RaycastHit groundHit;
+    public bool isPlayerGrounded = false;
 
     private void Awake()
     {
         bounds = GetComponent<Collider>().bounds;
-        halfHeight = bounds.extents.y;
+        halfHeight = bounds.extents.y / 2;
         bounds.Expand(-2 * skinWidth);
     }
 
     public void Move(Vector3 movementInput)
     {
         Vector3 gravityInAir = new Vector3(0f, gravity * Time.deltaTime, 0f);
-        Vector3 gravityInGrounded = new Vector3(0f, gravityGrounded * Time.deltaTime, 0f);
+        Vector3 gravityOnGround = new Vector3(0f, gravityGrounded * Time.deltaTime, 0f);
 
+        Vector3 footPosition = new Vector3(transform.position.x, transform.position.y - halfHeight, transform.position.z);
+        Vector3 headPosition = new Vector3(transform.position.x, transform.position.y + halfHeight, transform.position.z);
 
-        Vector3 processedMovement = CollideAndSlide(movementInput, transform.position, 0, false, movementInput);
+        movementInput = ProcessSlope(movementInput);
+
+        Vector3 processedMovement = CollideAndSlide(movementInput, footPosition, headPosition, 0, false, movementInput);
         if (!IsGrounded())
         {
-            processedMovement += CollideAndSlide(gravityInAir, transform.position + processedMovement, 0, true, gravityInAir);
+            processedMovement += CollideAndSlide(gravityInAir, footPosition + processedMovement, headPosition + processedMovement, 0, true, gravityInAir);
         }
         else
         {
-            processedMovement += CollideAndSlide(gravityInAir, transform.position + processedMovement, 0, true, gravityInAir);
+            processedMovement += CollideAndSlide(gravityOnGround, footPosition + processedMovement, headPosition + processedMovement, 0, true, gravityOnGround);
         }
+
         transform.position += processedMovement;
+    }
+
+    public Vector3 CollideAndSlide(Vector3 givenVelocity, Vector3 givenFootPosition, Vector3 givenHeadPosition, int depth, bool gravityPass, Vector3 initialVelocity)
+    {
+        // Used to break recursion
+        if (depth >= maxBounces)
+        {
+            return Vector3.zero;
+        }
+
+        float distance = givenVelocity.magnitude + skinWidth;
+
+        // Swept capsule is used to check for collisions
+        if (Physics.CapsuleCast(givenFootPosition, givenHeadPosition, bounds.extents.x, givenVelocity.normalized, out RaycastHit hit, distance, collisionMask))
+        {
+            // This causes issues when going up and to the side on slopes
+            // The hit.distance is usually small resulting in a negative snapToSurface
+            // The player can still move but much slower
+            // Represents the distance the player has to travel before touching the surface
+            Vector3 snapToSurface = givenVelocity.normalized * (hit.distance - skinWidth);
+
+            // Left over velocity after the surface
+            Vector3 leftover = givenVelocity - snapToSurface;
+
+            // Angle of the collider's surface
+            float angle = Vector3.Angle(Vector3.up, hit.normal);
+
+            // Ensures snap to surface distance is greater than skin width
+            if (snapToSurface.magnitude <= skinWidth)
+            {
+                snapToSurface = Vector3.zero;
+            }
+
+            // Normal ground / slope
+            if (angle <= maxSlopeAngle)
+            {
+                // Gravity is being processed
+                // Do not slide on shallow slopes
+                if (gravityPass)
+                {
+                    return snapToSurface;
+                }
+            }
+
+            leftover = ProjectAndScale(leftover, hit.normal);
+
+            // Return current level of collide and slide and add the previous iteration to it
+            return snapToSurface + CollideAndSlide(leftover, givenFootPosition + snapToSurface, givenHeadPosition + snapToSurface, depth + 1, gravityPass, initialVelocity);
+        }
+
+        return givenVelocity;
     }
 
     /*
@@ -68,7 +129,7 @@ public class TestController : MonoBehaviour
         }
 
         float distance = givenVelocity.magnitude + skinWidth;
-        
+
         // Swept sphere is used to check for collisions
         if (Physics.SphereCast(givenPosition, bounds.extents.x, givenVelocity.normalized, out RaycastHit hit, distance, collisionMask))
         {
@@ -136,11 +197,47 @@ public class TestController : MonoBehaviour
     {
         float sphereCastRadius = bounds.extents.x;
         Vector3 playerCenterPoint = new Vector3(transform.position.x, transform.position.y, transform.position.z);
-        Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.down, out RaycastHit groundHit);
+        Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.down, out groundHit);
         float playerCenterToGroundDistance = groundHit.distance + sphereCastRadius;
 
-        return (playerCenterToGroundDistance >= bounds.extents.y + skinWidth - groundCheckTolerance) && 
+        isPlayerGrounded = (playerCenterToGroundDistance >= bounds.extents.y + skinWidth - groundCheckTolerance) &&
             (playerCenterToGroundDistance <= bounds.extents.y + skinWidth + groundCheckTolerance);
 
+        return isPlayerGrounded;
+    }
+
+    private Vector3 ProcessSlope(Vector3 moveInput)
+    {
+        Vector3 slopeMovement = moveInput;
+        
+
+        if (isPlayerGrounded)
+        {
+            Vector3 groundNormal = transform.InverseTransformDirection(groundHit.normal);
+            float groundSlopeAngle = Vector3.Angle(groundNormal, transform.up);
+
+            if (groundSlopeAngle != 0)
+            {
+                Quaternion slopeAngleRotation = Quaternion.FromToRotation(transform.up, groundNormal);
+                slopeMovement = slopeAngleRotation * slopeMovement;
+
+                // If slope angle is larger than the max slope angle, add the negative slope vector to player movement
+                if (groundSlopeAngle > maxSlopeAngle)
+                {
+                    // Gets a vector parallel to the slope
+                    // It is normalized, multiplied by Time.deltaTime, and a slide down multiplier to increase the speed of the downward slide
+                    Vector3 slideDownVector = Vector3.ProjectOnPlane(transform.up, groundHit.normal).normalized * slideDownMultiplier * Time.deltaTime;
+
+                    // Subtract the slide down vector from the slope movement to get the final movement for the player 
+                    slopeMovement = slopeMovement - slideDownVector;
+                }
+            }
+        }
+
+#if UNITY_EDITOR
+        Debug.DrawRay(transform.position, transform.TransformDirection(slopeMovement), Color.red, 0.5f);
+#endif
+
+        return slopeMovement;
     }
 }
