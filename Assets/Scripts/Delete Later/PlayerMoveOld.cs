@@ -12,10 +12,10 @@ using UnityEngine.InputSystem;
  * Certain actions should be disabled during build mode
  */
 
-namespace FPSPrototype.Player
+namespace FPSPrototype.Delete
 {
 
-    public class PlayerMove : MonoBehaviour
+    public class PlayerMoveOld : MonoBehaviour
     {
         [Header("Movement Speed Settings")]
         [SerializeField]

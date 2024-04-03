@@ -6,9 +6,9 @@ using UnityEngine;
 /*
  * Contains the logic for the player looking around the game world
  */
-namespace FPSPrototype.Player
+namespace FPSPrototype.Delete
 {
-    public class PlayerLook : MonoBehaviour
+    public class PlayerLookOld : MonoBehaviour
     {
         [Header("Look Parameters")]
         [Tooltip("Horizontal look sensitivity")]
