@@ -35,6 +35,7 @@ namespace FPSPrototype.Player
         private void Update()
         {
             // Process Movement Input
+            playerMovement.ProcessMove(playerActions.Player.Move.ReadValue<Vector2>()); 
         }
 
         private void LateUpdate()
