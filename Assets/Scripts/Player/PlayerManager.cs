@@ -42,6 +42,10 @@ namespace FPSPrototype.Player
         {
             // Process Look Input
             playerLook.ProcessLook(playerActions.Player.Look.ReadValue<Vector2>());
+            if (transform.position.y < -300)
+            {
+                transform.position = new Vector3(0, 2, 0);
+            }
         }
     }
 }

@@ -17,21 +17,19 @@ namespace FPSPrototype.Player
         [SerializeField]
         private float sprintSpeed = 12.0f;
 
-        private MovementController movementController;
+        private CCMovementController movementController;
 
         private void Awake()
         {
-            movementController = GetComponent<MovementController>();
+            movementController = GetComponent<CCMovementController>();
         }
 
         public void ProcessMove(Vector2 movementInput)
         {
-            // Create movement vector based on player input and the current angle
             Vector3 currentMovement = new Vector3();
             currentMovement += transform.forward * movementInput.y;
             currentMovement += transform.right * movementInput.x;
 
-            // Clamp the magnitude of the movement vector to 1f
             currentMovement = Vector3.ClampMagnitude(currentMovement, 1f);
             currentMovement = currentMovement * walkSpeed * Time.deltaTime;
 

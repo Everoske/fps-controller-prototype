@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace FPSPrototype.Player
@@ -68,18 +69,23 @@ namespace FPSPrototype.Player
             }
 
             Vector3 processedMovement = CollideAndSlide(movementInput, footPosition, headPosition, 0, false, movementInput);
-
-            // Handle slide down here?
-            // If sliding, apply no gravity
-
-            Vector3 gravityToApply = ProcessGravity();
-            processedMovement += CollideAndSlide(gravityToApply, footPosition + processedMovement, headPosition + processedMovement, 0, true, gravityToApply);
+            //Vector3 processedMovement = CollideAndSlide2(movementInput, footPosition, headPosition, 0);
+            transform.position += processedMovement;
 
 #if UNITY_EDITOR
             Debug.DrawRay(transform.position, processedMovement, Color.red, 0.5f);
 #endif
 
-            transform.position += processedMovement;
+            footPosition = new Vector3(transform.position.x, transform.position.y - halfHeight, transform.position.z);
+            headPosition = new Vector3(transform.position.x, transform.position.y + halfHeight, transform.position.z);
+            // Handle slide down here?
+            // If sliding, apply no gravity
+
+            Vector3 gravityToApply = ProcessGravity();
+            //gravityToApply = CollideAndSlide2(gravityToApply, footPosition, headPosition, 0);
+            gravityToApply = CollideAndSlide(gravityToApply, footPosition, headPosition, 0, true, gravityToApply);
+
+            transform.position += gravityToApply;
         }
 
         /// <summary>
@@ -129,19 +135,9 @@ namespace FPSPrototype.Player
                     {
                         return snapToSurface;
                     }
-
-                    leftover = ProjectAndScale(leftover, hit.normal);
-                }
-                else
-                {
-                    float scale = 1 - Vector3.Dot(
-                        new Vector3(hit.normal.x, 0, hit.normal.z).normalized,
-                        -new Vector3(initialVelocity.x, 0, initialVelocity.z).normalized
-                        );
-
-                    leftover = ProjectAndScale(leftover, hit.normal) * scale;
                 }
                 
+                leftover = ProjectAndScale(leftover, hit.normal);
 
                 return snapToSurface + CollideAndSlide(leftover, footPosition + snapToSurface, headPosition + snapToSurface,
                     depth + 1, gravityPass, initialVelocity);
@@ -221,5 +217,40 @@ namespace FPSPrototype.Player
             return (playerCenterToGroundDistance >= bounds.extents.y + skinWidth - groundCheckTolerance) &&
                 (playerCenterToGroundDistance <= bounds.extents.y + skinWidth + groundCheckTolerance);
         }
+
+        private Vector3 CollideAndSlide2(Vector3 givenVelocity, Vector3 footPosition, Vector3 headPosition, float depth)
+        {
+            if (depth > 25)
+            {
+                return Vector3.zero;
+            }
+
+            float verySmallDistance = 0.015f;
+
+            if (Physics.CapsuleCast(footPosition, headPosition, bounds.extents.x, givenVelocity.normalized,
+                out RaycastHit hit, givenVelocity.magnitude, collisionMask))
+            {
+                Vector3 moveToSurface = givenVelocity * (hit.distance - verySmallDistance);
+
+                if (moveToSurface.magnitude <= verySmallDistance)
+                {
+                    return Vector3.zero;
+                }
+
+                Vector3 leftover = givenVelocity - moveToSurface;
+
+
+                Vector3 slidingVector = ProjectAndScale(leftover, hit.normal);
+
+                return moveToSurface + CollideAndSlide2(slidingVector, footPosition + moveToSurface, headPosition + moveToSurface, depth + 1);
+
+
+            }
+
+
+
+                return givenVelocity;
+        }
+
     }
 }
