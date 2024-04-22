@@ -48,7 +48,15 @@ namespace FPSPrototype.Player
             float lookX = look.x * xSensitivity * Time.deltaTime;
             float lookY = look.y * ySensitivity * Time.deltaTime;
 
-            totalPitch -= lookY;
+            if (!inverted)
+            {
+                totalPitch -= lookY;
+            }
+            else
+            {
+                totalPitch += lookY;
+            }
+            
 
             totalPitch = Mathf.Clamp(totalPitch, minPitch, maxPitch);
 
