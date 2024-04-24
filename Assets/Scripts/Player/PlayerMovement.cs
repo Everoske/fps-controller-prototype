@@ -17,16 +17,18 @@ namespace FPSPrototype.Player
         [SerializeField]
         private float sprintSpeed = 12.0f;
 
+        private bool isRunning = false;
+
         [Header("Gravity")]
         [SerializeField]
         private float baseGravity = -19.6f;
         [SerializeField]
         private float terminalVelocity = -98f;
+        [Tooltip("How quickly gravity increases")]
         [SerializeField]
-        private float gravityIncrement = -4.4f;
+        private float gravityTime = 0.5f;
         [SerializeField]
         private float gravityGrounded = -1.0f;
-
         [SerializeField]
         private float groundCheckTolerance = 0.015f;
         [SerializeField]
@@ -34,6 +36,27 @@ namespace FPSPrototype.Player
 
         private bool isGrounded = false;
         private RaycastHit groundHit;
+
+        private float timeSinceLeftGround = 0.0f;
+        private float currentGravity = 0.0f;
+
+        [Header("Jump")]
+        [SerializeField]
+        private float maxJumpHeight = 3.0f;
+        [Tooltip("Time to reach max jump height")]
+        [SerializeField]
+        private float timeToJump = 0.25f;
+        [Tooltip("Determines how long the jumping grace period since player left the ground")]
+        [SerializeField]
+        private float coyoteTime = 0.15f;
+        [SerializeField]
+        private float jumpBufferTime = 0.15f;
+
+        private bool jumpPressedThisFrame = false;
+        private bool jumpHeld = false;
+        private bool jumpInProgress = false;
+
+        
 
         [Header("Slope Handling")]
         [SerializeField]
@@ -44,21 +67,25 @@ namespace FPSPrototype.Player
         [SerializeField]
         private float slideDownMultiplier = 15f;
 
+        private bool playerOnSteepSlope = false;
+
         private CharacterController characterController;
 
         private void Awake()
         {
             characterController = GetComponent<CharacterController>();
             characterController.slopeLimit = maxSlopeAngle;
+            currentGravity = baseGravity;
         }
 
         /// <summary>
         /// Determines player behavior based on their input
         /// </summary>
-        /// <param name="inputs">Container for player inputs</param>
-        public void SetInputs(MovementInputs inputs)
+        /// <param name="movementInputs">Container for player inputs</param>
+        public void SetInputs(MovementInputs movementInputs)
         {
-
+            isRunning = movementInputs.sprintHeld;
+            jumpPressedThisFrame = movementInputs.jumpPressedThisFrame;
         }
 
         public void ProcessMove(Vector2 movementInput)
@@ -68,7 +95,9 @@ namespace FPSPrototype.Player
             currentMovement += transform.right * movementInput.x;
 
             currentMovement = Vector3.ClampMagnitude(currentMovement, 1f);
-            currentMovement = currentMovement * walkSpeed * Time.deltaTime;
+            float targetSpeed = DetermineSpeed();
+
+            currentMovement = currentMovement * targetSpeed * Time.deltaTime;
 
             // Move the character based on all parameters
             Move(currentMovement);
@@ -83,11 +112,14 @@ namespace FPSPrototype.Player
 
             processedInput = ProcessSlope(processedInput);
 
+
+
+            processedInput += ProcessGravity();
+            processedInput = ProcessJump(processedInput);
+
 #if UNITY_EDITOR
             Debug.DrawRay(transform.position, transform.TransformDirection(processedInput), Color.red, 0.5f);
 #endif
-
-            processedInput += ProcessGravity();
 
             characterController.Move(processedInput);
         }
@@ -97,10 +129,17 @@ namespace FPSPrototype.Player
             Vector3 gravityToApply = Vector3.zero;
             if (!isGrounded)
             {
-                gravityToApply = new Vector3(0f, baseGravity * Time.deltaTime, 0f);
+                timeSinceLeftGround += Time.deltaTime;
+                float timeMultiplier = Mathf.Max(1f, timeSinceLeftGround / gravityTime);
+                currentGravity = baseGravity * timeMultiplier;
+                currentGravity = Mathf.Max(currentGravity, terminalVelocity);
+
+                gravityToApply = new Vector3(0f, currentGravity * Time.deltaTime, 0f);
             }
             else
             {
+                timeSinceLeftGround = 0.0f;
+                currentGravity = baseGravity;
                 gravityToApply = new Vector3(0f, gravityGrounded * Time.deltaTime, 0f);
             }
 
@@ -115,6 +154,7 @@ namespace FPSPrototype.Player
             {
                 Vector3 groundNormal = transform.InverseTransformDirection(groundHit.normal);
                 float groundSlopeAngle = Vector3.Angle(groundNormal, transform.up);
+                playerOnSteepSlope = false;
 
                 if (groundSlopeAngle != 0f)
                 {
@@ -123,6 +163,8 @@ namespace FPSPrototype.Player
 
                     if (groundSlopeAngle > slideDownAngle)
                     {
+                        playerOnSteepSlope = true;
+
                         float maxSlideLimit = maxSlopeAngle - slideDownAngle;
                         float currentSlideLimit = maxSlopeAngle - groundSlopeAngle;
                         float slideFactor = 1;
@@ -142,6 +184,30 @@ namespace FPSPrototype.Player
             }
 
             return slopeMovement;
+        }
+
+        private Vector3 ProcessJump(Vector3 movementInput)
+        {
+            Vector3 jumpInput = movementInput;
+
+            if (isGrounded && !playerOnSteepSlope && !jumpInProgress && jumpPressedThisFrame)
+            {
+                
+                jumpInProgress = true;
+                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime) - (currentGravity * Time.deltaTime);
+                jumpInput.y += jumpAmount;
+            }
+            else if (jumpInProgress && timeSinceLeftGround > 0 && timeSinceLeftGround < timeToJump) 
+            {
+                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime) - (currentGravity * Time.deltaTime);
+                jumpInput.y += jumpAmount;
+            }
+            else
+            {
+                jumpInProgress = false;
+            }
+
+            return jumpInput;
         }
 
 
@@ -164,6 +230,15 @@ namespace FPSPrototype.Player
             }
         }
 
+        /// <summary>
+        /// Determines the speed the player should be moving at 
+        /// </summary>
+        private float DetermineSpeed()
+        {
+            float targetSpeed = isRunning ? sprintSpeed : walkSpeed;
+            return targetSpeed;
+        }
+
         private void OnDrawGizmos()
         {
             if (Application.isPlaying)
@@ -177,14 +252,14 @@ namespace FPSPrototype.Player
 
     public struct MovementInputs
     {
-        private readonly bool sprintPressedThisFrame;
-        private readonly bool sprintHeld;
-        private readonly bool sprintReleasedThisFrame;
-        private readonly bool jumpPressedThisFrame;
-        private readonly bool jumpHeld;
-        private readonly bool jumpReleasedThisFrame;
-        private readonly bool crouchPressedThisFrame;
-        private readonly bool crouchHeld;
-        private readonly bool crouchReleasedThisFrame;
+        public bool sprintPressedThisFrame;
+        public bool sprintHeld;
+        public bool sprintReleasedThisFrame;
+        public bool jumpPressedThisFrame;
+        public bool jumpHeld;
+        public bool jumpReleasedThisFrame;
+        public bool crouchPressedThisFrame;
+        public bool crouchHeld;
+        public bool crouchReleasedThisFrame;
     }
 }
