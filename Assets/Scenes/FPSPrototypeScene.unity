@@ -1533,7 +1533,8 @@ MonoBehaviour:
   sprintSpeed: 12
   baseGravity: -19.6
   terminalVelocity: -98
-  gravityTime: 0.5
+  gravityIncrement: -4.4
+  gravityTime: 0.05
   gravityGrounded: -1
   groundCheckTolerance: 0.015
   collisionMask:

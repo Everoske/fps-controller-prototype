@@ -24,9 +24,11 @@ namespace FPSPrototype.Player
         private float baseGravity = -19.6f;
         [SerializeField]
         private float terminalVelocity = -98f;
+        [SerializeField]
+        private float gravityIncrement = -4.4f;
         [Tooltip("How quickly gravity increases")]
         [SerializeField]
-        private float gravityTime = 0.5f;
+        private float gravityTime = 0.05f;
         [SerializeField]
         private float gravityGrounded = -1.0f;
         [SerializeField]
@@ -130,9 +132,12 @@ namespace FPSPrototype.Player
             if (!isGrounded)
             {
                 timeSinceLeftGround += Time.deltaTime;
-                float timeMultiplier = Mathf.Max(1f, timeSinceLeftGround / gravityTime);
-                currentGravity = baseGravity * timeMultiplier;
+                int timeMultiplier = (int)(timeSinceLeftGround / gravityTime);
+
+                currentGravity = baseGravity + (gravityIncrement * timeMultiplier);
                 currentGravity = Mathf.Max(currentGravity, terminalVelocity);
+
+                Debug.Log(currentGravity);
 
                 gravityToApply = new Vector3(0f, currentGravity * Time.deltaTime, 0f);
             }
@@ -194,12 +199,12 @@ namespace FPSPrototype.Player
             {
                 
                 jumpInProgress = true;
-                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime) - (currentGravity * Time.deltaTime);
+                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime) - (baseGravity * Time.deltaTime);
                 jumpInput.y += jumpAmount;
             }
             else if (jumpInProgress && timeSinceLeftGround > 0 && timeSinceLeftGround < timeToJump) 
             {
-                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime) - (currentGravity * Time.deltaTime);
+                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime) - (baseGravity * Time.deltaTime);
                 jumpInput.y += jumpAmount;
             }
             else
