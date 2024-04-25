@@ -16,19 +16,22 @@ namespace FPSPrototype.Player
         private float walkSpeed = 8.0f;
         [SerializeField]
         private float sprintSpeed = 12.0f;
+        [SerializeField]
+        private float crouchSpeed = 4.0f;
+        [SerializeField]
+        private float airSpeed = 2.0f;
+        [Tooltip("Determines how fast player slows down in air")]
+        [SerializeField]
+        private float airDrag = 2.5f;
 
         private bool isRunning = false;
+        private float targetSpeed = 0.0f;
 
         [Header("Gravity")]
         [SerializeField]
-        private float baseGravity = -19.6f;
+        private float baseGravity = -12.8f;
         [SerializeField]
         private float terminalVelocity = -98f;
-        [SerializeField]
-        private float gravityIncrement = -4.4f;
-        [Tooltip("How quickly gravity increases")]
-        [SerializeField]
-        private float gravityTime = 0.05f;
         [SerializeField]
         private float gravityGrounded = -1.0f;
         [SerializeField]
@@ -57,6 +60,8 @@ namespace FPSPrototype.Player
         private bool jumpPressedThisFrame = false;
         private bool jumpHeld = false;
         private bool jumpInProgress = false;
+
+        private float coyoteTimeCounter = 0.0f;
 
         
 
@@ -97,7 +102,7 @@ namespace FPSPrototype.Player
             currentMovement += transform.right * movementInput.x;
 
             currentMovement = Vector3.ClampMagnitude(currentMovement, 1f);
-            float targetSpeed = DetermineSpeed();
+            targetSpeed = DetermineSpeed();
 
             currentMovement = currentMovement * targetSpeed * Time.deltaTime;
 
@@ -113,8 +118,6 @@ namespace FPSPrototype.Player
             Vector3 processedInput = movementInput;
 
             processedInput = ProcessSlope(processedInput);
-
-
 
             processedInput += ProcessGravity();
             processedInput = ProcessJump(processedInput);
@@ -132,12 +135,8 @@ namespace FPSPrototype.Player
             if (!isGrounded)
             {
                 timeSinceLeftGround += Time.deltaTime;
-                int timeMultiplier = (int)(timeSinceLeftGround / gravityTime);
 
-                currentGravity = baseGravity + (gravityIncrement * timeMultiplier);
-                currentGravity = Mathf.Max(currentGravity, terminalVelocity);
-
-                Debug.Log(currentGravity);
+                currentGravity = Mathf.Max(baseGravity * timeSinceLeftGround, terminalVelocity);
 
                 gravityToApply = new Vector3(0f, currentGravity * Time.deltaTime, 0f);
             }
@@ -186,6 +185,10 @@ namespace FPSPrototype.Player
                         slopeMovement = slopeMovement - slideDownVector;
                     }
                 }
+            } 
+            else
+            {
+                playerOnSteepSlope = false;
             }
 
             return slopeMovement;
@@ -195,24 +198,39 @@ namespace FPSPrototype.Player
         {
             Vector3 jumpInput = movementInput;
 
-            if (isGrounded && !playerOnSteepSlope && !jumpInProgress && jumpPressedThisFrame)
+            SetCoyoteTime();
+
+            bool canJump = isGrounded || coyoteTimeCounter < coyoteTime;
+
+            if (canJump && !playerOnSteepSlope && !jumpInProgress && jumpPressedThisFrame)
             {
-                
                 jumpInProgress = true;
-                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime) - (baseGravity * Time.deltaTime);
+                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime);
+
                 jumpInput.y += jumpAmount;
             }
             else if (jumpInProgress && timeSinceLeftGround > 0 && timeSinceLeftGround < timeToJump) 
             {
-                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime) - (baseGravity * Time.deltaTime);
+                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime);
                 jumpInput.y += jumpAmount;
             }
             else
             {
                 jumpInProgress = false;
             }
-
             return jumpInput;
+        }
+
+        private void SetCoyoteTime()
+        {
+            if (isGrounded)
+            {
+                coyoteTimeCounter = 0.0f;
+            }
+            else
+            {
+                coyoteTimeCounter += Time.deltaTime;
+            }
         }
 
 
@@ -240,8 +258,15 @@ namespace FPSPrototype.Player
         /// </summary>
         private float DetermineSpeed()
         {
-            float targetSpeed = isRunning ? sprintSpeed : walkSpeed;
-            return targetSpeed;
+            if (!isGrounded)
+            {
+                if (targetSpeed > airSpeed)
+                {
+                    return Mathf.Max(targetSpeed - airDrag * Time.deltaTime, airSpeed);
+                }
+                return airSpeed;
+            }
+            return isRunning ? sprintSpeed : walkSpeed;
         }
 
         private void OnDrawGizmos()

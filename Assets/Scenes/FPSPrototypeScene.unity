@@ -1531,10 +1531,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   walkSpeed: 8
   sprintSpeed: 12
-  baseGravity: -19.6
+  crouchSpeed: 4
+  airSpeed: 2
+  airDrag: 2.5
+  baseGravity: -12.8
   terminalVelocity: -98
-  gravityIncrement: -4.4
-  gravityTime: 0.05
   gravityGrounded: -1
   groundCheckTolerance: 0.015
   collisionMask:
@@ -1542,7 +1543,7 @@ MonoBehaviour:
     m_Bits: 192
   maxJumpHeight: 3
   timeToJump: 0.25
-  coyoteTime: 1
+  coyoteTime: 0.15
   jumpBufferTime: 0.2
   maxSlopeAngle: 75
   slideDownAngle: 55
