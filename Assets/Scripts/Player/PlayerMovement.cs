@@ -47,7 +47,10 @@ namespace FPSPrototype.Player
 
         [Header("Jump")]
         [SerializeField]
-        private float maxJumpHeight = 3.0f;
+        private float baseJumpHeight = 1.0f;
+        [Tooltip("How much the jump height will increase if jump is held continuously")]
+        [SerializeField]
+        private float jumpHeldMultiplier = 3f;
         [Tooltip("Time to reach max jump height")]
         [SerializeField]
         private float timeToJump = 0.25f;
@@ -60,6 +63,8 @@ namespace FPSPrototype.Player
         private bool jumpPressedThisFrame = false;
         private bool jumpHeld = false;
         private bool jumpInProgress = false;
+
+        private bool jumpHeldContinuously = false;
 
         private float jumpProgressTimer = 0.0f;
         private float coyoteTimeCounter = 0.0f;
@@ -94,6 +99,7 @@ namespace FPSPrototype.Player
         {
             isRunning = movementInputs.sprintHeld;
             jumpPressedThisFrame = movementInputs.jumpPressedThisFrame;
+            jumpHeld = movementInputs.jumpHeld;
         }
 
         public void ProcessMove(Vector2 movementInput)
@@ -207,7 +213,9 @@ namespace FPSPrototype.Player
             if (canJump && !playerOnSteepSlope && !jumpInProgress && jumpPressedThisFrame)
             {
                 jumpInProgress = true;
-                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime);
+                jumpHeldContinuously = jumpHeld;
+
+                float jumpAmount = (baseJumpHeight / timeToJump * Time.deltaTime);
 
                 if (timeSinceLeftGround > 0)
                 {
@@ -219,7 +227,17 @@ namespace FPSPrototype.Player
             }
             else if (jumpInProgress && jumpProgressTimer > 0 && jumpProgressTimer < timeToJump) 
             {
-                float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime);
+                if (!jumpHeld)
+                {
+                    jumpHeldContinuously = false;
+                }
+
+                float jumpAmount = (baseJumpHeight / timeToJump * Time.deltaTime);
+
+                if (jumpHeldContinuously)
+                {
+                    jumpAmount *= jumpHeldMultiplier;
+                }
                 jumpInput.y += jumpAmount;
             }
             else

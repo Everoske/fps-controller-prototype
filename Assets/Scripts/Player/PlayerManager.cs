@@ -38,6 +38,7 @@ namespace FPSPrototype.Player
             MovementInputs movementInputs = new MovementInputs();
             movementInputs.sprintHeld = playerActions.Player.Sprint.IsPressed();
             movementInputs.jumpPressedThisFrame = playerActions.Player.Jump.WasPressedThisFrame();
+            movementInputs.jumpHeld = playerActions.Player.Jump.IsPressed();
 
             playerMovement.SetInputs(movementInputs);
             playerMovement.ProcessMove(playerActions.Player.Move.ReadValue<Vector2>()); 

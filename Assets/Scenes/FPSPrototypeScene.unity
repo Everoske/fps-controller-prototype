@@ -1541,7 +1541,8 @@ MonoBehaviour:
   collisionMask:
     serializedVersion: 2
     m_Bits: 192
-  maxJumpHeight: 3
+  baseJumpHeight: 1
+  jumpHeldMultiplier: 3
   timeToJump: 0.25
   coyoteTime: 0.15
   jumpBufferTime: 0.2
