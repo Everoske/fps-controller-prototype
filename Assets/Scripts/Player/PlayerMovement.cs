@@ -61,6 +61,7 @@ namespace FPSPrototype.Player
         private bool jumpHeld = false;
         private bool jumpInProgress = false;
 
+        private float jumpProgressTimer = 0.0f;
         private float coyoteTimeCounter = 0.0f;
 
         
@@ -198,18 +199,25 @@ namespace FPSPrototype.Player
         {
             Vector3 jumpInput = movementInput;
 
+            SetJumpProgressTime();
             SetCoyoteTime();
 
-            bool canJump = isGrounded || coyoteTimeCounter < coyoteTime;
+            bool canJump = isGrounded || coyoteTimeCounter < coyoteTime && jumpProgressTimer < timeToJump;
 
             if (canJump && !playerOnSteepSlope && !jumpInProgress && jumpPressedThisFrame)
             {
                 jumpInProgress = true;
                 float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime);
 
+                if (timeSinceLeftGround > 0)
+                {
+                    jumpAmount -= baseGravity * (timeSinceLeftGround) * Time.deltaTime;
+                    timeSinceLeftGround = 0;
+                }
+
                 jumpInput.y += jumpAmount;
             }
-            else if (jumpInProgress && timeSinceLeftGround > 0 && timeSinceLeftGround < timeToJump) 
+            else if (jumpInProgress && jumpProgressTimer > 0 && jumpProgressTimer < timeToJump) 
             {
                 float jumpAmount = (maxJumpHeight / timeToJump * Time.deltaTime);
                 jumpInput.y += jumpAmount;
@@ -230,6 +238,18 @@ namespace FPSPrototype.Player
             else
             {
                 coyoteTimeCounter += Time.deltaTime;
+            }
+        }
+
+        private void SetJumpProgressTime()
+        {
+            if (jumpInProgress)
+            {
+                jumpProgressTimer += Time.deltaTime;
+            }
+            else if (isGrounded)
+            {
+                jumpProgressTimer = 0.0f;
             }
         }
 
