@@ -68,8 +68,7 @@ namespace FPSPrototype.Player
 
         private float jumpProgressTimer = 0.0f;
         private float coyoteTimeCounter = 0.0f;
-
-        
+        private float jumpBufferCounter = 0.0f;
 
         [Header("Slope Handling")]
         [SerializeField]
@@ -207,13 +206,15 @@ namespace FPSPrototype.Player
 
             SetJumpProgressTime();
             SetCoyoteTime();
+            SetJumpBufferTime();
 
             bool canJump = isGrounded || coyoteTimeCounter < coyoteTime && jumpProgressTimer < timeToJump;
 
-            if (canJump && !playerOnSteepSlope && !jumpInProgress && jumpPressedThisFrame)
+            if (canJump && !playerOnSteepSlope && !jumpInProgress && JumpCalled())
             {
                 jumpInProgress = true;
                 jumpHeldContinuously = jumpHeld;
+                jumpBufferCounter = 0;
 
                 float jumpAmount = (baseJumpHeight / timeToJump * Time.deltaTime);
 
@@ -271,6 +272,22 @@ namespace FPSPrototype.Player
             }
         }
 
+        private void SetJumpBufferTime()
+        {
+            if (jumpPressedThisFrame || jumpHeld)
+            {
+                jumpBufferCounter = jumpBufferTime;
+            }
+            else
+            {
+                jumpBufferCounter -= Time.deltaTime;
+            }
+        }
+
+        private bool JumpCalled()
+        {
+            return jumpBufferCounter > 0;
+        }
 
         /// <summary>
         /// Determines if the character is grounded
