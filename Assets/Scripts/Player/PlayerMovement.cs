@@ -37,6 +37,8 @@ namespace FPSPrototype.Player
         [SerializeField]
         private float groundCheckTolerance = 0.015f;
         [SerializeField]
+        private float headCheckTolerance = 0.015f;
+        [SerializeField]
         private LayerMask collisionMask;
 
         private bool isGrounded = false;
@@ -228,6 +230,13 @@ namespace FPSPrototype.Player
             }
             else if (jumpInProgress && jumpProgressTimer > 0 && jumpProgressTimer < timeToJump) 
             {
+                if (CheckHeadCollision(0, out float distanceToCollider))
+                {
+                    jumpHeldContinuously = false;
+                    jumpInProgress = false;
+                    return jumpInput;
+                }
+
                 if (!jumpHeld)
                 {
                     jumpHeldContinuously = false;
@@ -244,6 +253,7 @@ namespace FPSPrototype.Player
             else
             {
                 jumpInProgress = false;
+                jumpHeldContinuously = false;
             }
             return jumpInput;
         }
@@ -306,6 +316,31 @@ namespace FPSPrototype.Player
             {
                 isGrounded = false;
             }
+        }
+
+
+        /// <summary>
+        /// Checks whether a collision occurs above the player
+        /// </summary>
+        /// <param name="distance">Distance to check for a collision</param>
+        /// <param name="distanceToCollider">Distance to the collision source</param>
+        /// <returns></returns>
+        private bool CheckHeadCollision(float distance, out float distanceToCollider)
+        {
+            distanceToCollider = -1f;
+
+            float sphereCastRadius = characterController.radius;
+            Vector3 playerCenterPoint = new Vector3(transform.position.x, transform.position.y, transform.position.z);
+            float checkDistance = characterController.height / 2 + characterController.skinWidth - characterController.radius + headCheckTolerance;
+            checkDistance += distance;
+
+            if (Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.up, out RaycastHit ceilingHit, checkDistance, collisionMask))
+            {
+                distanceToCollider = ceilingHit.distance;
+                return true;
+            }
+
+            return false;
         }
 
         /// <summary>
