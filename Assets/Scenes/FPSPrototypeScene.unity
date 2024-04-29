@@ -1416,7 +1416,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 480543009}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -1522,7 +1522,7 @@ MonoBehaviour:
   timeToJump: 0.25
   crouchJumpMultiplier: 0.5
   coyoteTime: 0.15
-  jumpBufferTime: 0.1
+  jumpBufferTime: 0.025
   crouchHeight: 1
   crouchTransitionTime: 10
   crouchHeightTolerance: 0.1

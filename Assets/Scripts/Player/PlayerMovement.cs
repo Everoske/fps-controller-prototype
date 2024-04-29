@@ -368,14 +368,36 @@ namespace FPSPrototype.Player
 
         private void Crouch()
         {
-            Debug.Log("Crouching");
-            isCrouching = true;
+            if (characterController.height >= crouchHeight + crouchHeightTolerance)
+            {
+                characterController.height = crouchHeight;
+                characterController.center = new Vector3(
+                    characterController.center.x, 
+                    characterController.center.y - (characterController.height / 2), 
+                    characterController.center.z
+                    );
+                isCrouching = true;
+            }
         }
 
         private void StandUp()
         {
-            Debug.Log("Uncrouching");
-            isCrouching = false;
+            float headCheckDistance = standingHeight - crouchHeight;
+
+            if (CheckHeadCollision(headCheckDistance, out float distanceToCollider))
+            {
+                
+            }
+            else
+            {
+                characterController.height = standingHeight;
+                characterController.center = new Vector3(
+                    characterController.center.x,
+                    0,
+                    characterController.center.z
+                    );
+                isCrouching = false;
+            }
         }
 
         private void EnforceExactHeight()
@@ -390,7 +412,7 @@ namespace FPSPrototype.Player
         {
             float sphereCastRadius = characterController.radius;
             Vector3 playerCenterPoint = new Vector3(transform.position.x, transform.position.y, transform.position.z);
-            float distance = characterController.height / 2 + characterController.skinWidth - characterController.radius + groundCheckTolerance;
+            float distance = standingHeight / 2 + characterController.skinWidth - characterController.radius + groundCheckTolerance;
 
             if (Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.down, out groundHit, distance, collisionMask))
             {
@@ -413,9 +435,10 @@ namespace FPSPrototype.Player
         {
             distanceToCollider = -1f;
 
+            // TODO: REFACTOR THIS TO MAKE IT EASIER TO UNDERSTAND
             float sphereCastRadius = characterController.radius;
-            Vector3 playerCenterPoint = new Vector3(transform.position.x, transform.position.y, transform.position.z);
-            float checkDistance = characterController.height / 2 + characterController.skinWidth - characterController.radius + headCheckTolerance;
+            Vector3 playerCenterPoint = new Vector3(transform.position.x, transform.position.y + characterController.center.y, transform.position.z);
+            float checkDistance = characterController.height / 2 + characterController.skinWidth - characterController.radius + headCheckTolerance - characterController.center.y;
             checkDistance += distance;
 
             if (Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.up, out RaycastHit ceilingHit, checkDistance, collisionMask))
@@ -449,9 +472,13 @@ namespace FPSPrototype.Player
         {
             if (Application.isPlaying)
             {
-                float distance = characterController.height / 2 + characterController.skinWidth - characterController.radius + groundCheckTolerance;
+                float distance = standingHeight / 2 + characterController.skinWidth - characterController.radius + groundCheckTolerance;
                 Vector3 sphereOrigin = new Vector3(transform.position.x, transform.position.y - distance, transform.position.z);
                 Gizmos.DrawWireSphere(sphereOrigin, characterController.radius);
+
+                float distance2 = characterController.height / 2 + characterController.skinWidth - characterController.radius + headCheckTolerance;
+                Vector3 sphereOrigin2 = new Vector3(transform.position.x, transform.position.y + characterController.center.y + distance2, transform.position.z);
+                Gizmos.DrawWireSphere(sphereOrigin2, characterController.radius);
             }
         }
     }
