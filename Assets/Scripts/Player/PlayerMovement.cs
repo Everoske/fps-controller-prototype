@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.XR;
 
 /*
@@ -37,8 +38,6 @@ namespace FPSPrototype.Player
         [SerializeField]
         private float groundCheckTolerance = 0.015f;
         [SerializeField]
-        private float headCheckTolerance = 0.015f;
-        [SerializeField]
         private LayerMask collisionMask;
 
         private bool isGrounded = false;
@@ -56,6 +55,9 @@ namespace FPSPrototype.Player
         [Tooltip("Time to reach max jump height")]
         [SerializeField]
         private float timeToJump = 0.25f;
+        [Tooltip("How much jump height will be reduced if jumping while crouched")]
+        [SerializeField]
+        private float crouchJumpMultiplier = 0.5f;
         [Tooltip("Determines how long the jumping grace period since player left the ground")]
         [SerializeField]
         private float coyoteTime = 0.15f;
@@ -71,6 +73,31 @@ namespace FPSPrototype.Player
         private float jumpProgressTimer = 0.0f;
         private float coyoteTimeCounter = 0.0f;
         private float jumpBufferCounter = 0.0f;
+
+        [Header("Crouch Settings")]
+        [SerializeField]
+        private float crouchHeight = 1f;
+        [SerializeField]
+        private float crouchTransitionTime = 10f;
+        [Tooltip("Used to check if crouch height is met")]
+        [SerializeField]
+        private float crouchHeightTolerance = 0.1f;
+
+        private float standingHeight = 0f;
+        private float currentHeight = 0f;
+        private float targetHeight = 0f;
+
+        private float targetTransitionTime = 0.0f;
+        private float crouchTimeCounter = 0.0f;
+
+        private bool isCrouching = false;
+        private bool attemptingToStand = false;
+        private bool crouchHeld = false;
+        private bool crouchReleasedThisFrame = false;
+        private bool crouchPressedThisFrame = false;
+
+        [SerializeField]
+        private float headCheckTolerance = 0.015f;
 
         [Header("Slope Handling")]
         [SerializeField]
@@ -90,6 +117,7 @@ namespace FPSPrototype.Player
             characterController = GetComponent<CharacterController>();
             characterController.slopeLimit = maxSlopeAngle;
             currentGravity = baseGravity;
+            standingHeight = characterController.height;
         }
 
         /// <summary>
@@ -101,6 +129,9 @@ namespace FPSPrototype.Player
             isRunning = movementInputs.sprintHeld;
             jumpPressedThisFrame = movementInputs.jumpPressedThisFrame;
             jumpHeld = movementInputs.jumpHeld;
+            crouchPressedThisFrame = movementInputs.crouchPressedThisFrame;
+            crouchHeld = movementInputs.crouchHeld;
+            crouchReleasedThisFrame = movementInputs.crouchReleasedThisFrame;
         }
 
         public void ProcessMove(Vector2 movementInput)
@@ -193,7 +224,7 @@ namespace FPSPrototype.Player
                         slopeMovement = slopeMovement - slideDownVector;
                     }
                 }
-            } 
+            }
             else
             {
                 playerOnSteepSlope = false;
@@ -226,9 +257,14 @@ namespace FPSPrototype.Player
                     timeSinceLeftGround = 0;
                 }
 
+                if (isCrouching)
+                {
+                    jumpAmount *= crouchJumpMultiplier;
+                }
+
                 jumpInput.y += jumpAmount;
             }
-            else if (jumpInProgress && jumpProgressTimer > 0 && jumpProgressTimer < timeToJump) 
+            else if (jumpInProgress && jumpProgressTimer > 0 && jumpProgressTimer < timeToJump)
             {
                 if (CheckHeadCollision(0, out float distanceToCollider))
                 {
@@ -248,6 +284,12 @@ namespace FPSPrototype.Player
                 {
                     jumpAmount *= jumpHeldMultiplier;
                 }
+
+                if (isCrouching)
+                {
+                    jumpAmount *= crouchJumpMultiplier;
+                }
+
                 jumpInput.y += jumpAmount;
             }
             else
@@ -299,6 +341,48 @@ namespace FPSPrototype.Player
             return jumpBufferCounter > 0;
         }
 
+        public void HandleCrouch()
+        {
+            // Determine if player should crouch
+
+            // Should jump when crouch pressed or held
+
+            bool canInitiateCrouch = isGrounded && (crouchPressedThisFrame || crouchHeld);
+            bool continueCrouching = isCrouching && crouchHeld;
+
+            bool shouldCrouch = canInitiateCrouch || continueCrouching;
+
+            if (shouldCrouch)
+            {
+                Crouch();
+            }
+            else if (isCrouching && isGrounded)
+            {
+                StandUp();
+            }
+
+            // If the player crouch, crouch
+
+            // Otherwise, Standup
+        }
+
+        private void Crouch()
+        {
+            Debug.Log("Crouching");
+            isCrouching = true;
+        }
+
+        private void StandUp()
+        {
+            Debug.Log("Uncrouching");
+            isCrouching = false;
+        }
+
+        private void EnforceExactHeight()
+        {
+
+        }
+
         /// <summary>
         /// Determines if the character is grounded
         /// </summary>
@@ -324,7 +408,7 @@ namespace FPSPrototype.Player
         /// </summary>
         /// <param name="distance">Distance to check for a collision</param>
         /// <param name="distanceToCollider">Distance to the collision source</param>
-        /// <returns></returns>
+        /// <returns>True if a collision was detected, false otherwise.</returns>
         private bool CheckHeadCollision(float distance, out float distanceToCollider)
         {
             distanceToCollider = -1f;
@@ -346,6 +430,7 @@ namespace FPSPrototype.Player
         /// <summary>
         /// Determines the speed the player should be moving at 
         /// </summary>
+        /// <returns>Speed to move player</returns>
         private float DetermineSpeed()
         {
             if (!isGrounded)
@@ -356,7 +441,8 @@ namespace FPSPrototype.Player
                 }
                 return airSpeed;
             }
-            return isRunning ? sprintSpeed : walkSpeed;
+
+            return isCrouching ? crouchSpeed : isRunning ? sprintSpeed : walkSpeed;
         }
 
         private void OnDrawGizmos()

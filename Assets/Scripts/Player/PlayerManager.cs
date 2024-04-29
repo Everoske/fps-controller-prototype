@@ -39,9 +39,13 @@ namespace FPSPrototype.Player
             movementInputs.sprintHeld = playerActions.Player.Sprint.IsPressed();
             movementInputs.jumpPressedThisFrame = playerActions.Player.Jump.WasPressedThisFrame();
             movementInputs.jumpHeld = playerActions.Player.Jump.IsPressed();
+            movementInputs.crouchHeld = playerActions.Player.Crouch.IsPressed();
+            movementInputs.crouchPressedThisFrame = playerActions.Player.Crouch.WasPressedThisFrame();
+            movementInputs.crouchReleasedThisFrame = playerActions.Player.Crouch.WasReleasedThisFrame();
 
             playerMovement.SetInputs(movementInputs);
-            playerMovement.ProcessMove(playerActions.Player.Move.ReadValue<Vector2>()); 
+            playerMovement.ProcessMove(playerActions.Player.Move.ReadValue<Vector2>());
+            playerMovement.HandleCrouch();
         }
 
         private void LateUpdate()
