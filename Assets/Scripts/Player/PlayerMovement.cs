@@ -84,8 +84,9 @@ namespace FPSPrototype.Player
         private float crouchHeightTolerance = 0.1f;
 
         private float standingHeight = 0f;
-        private float currentHeight = 0f;
         private float targetHeight = 0f;
+        private float standingYCenter = 0f;
+        private float targetYCenter = 0.0f;
 
         private float targetTransitionTime = 0.0f;
         private float crouchTimeCounter = 0.0f;
@@ -118,6 +119,7 @@ namespace FPSPrototype.Player
             characterController.slopeLimit = maxSlopeAngle;
             currentGravity = baseGravity;
             standingHeight = characterController.height;
+            standingYCenter = characterController.center.y;
         }
 
         /// <summary>
@@ -343,10 +345,6 @@ namespace FPSPrototype.Player
 
         public void HandleCrouch()
         {
-            // Determine if player should crouch
-
-            // Should jump when crouch pressed or held
-
             bool canInitiateCrouch = isGrounded && (crouchPressedThisFrame || crouchHeld);
             bool continueCrouching = isCrouching && crouchHeld;
 
@@ -354,55 +352,88 @@ namespace FPSPrototype.Player
 
             if (shouldCrouch)
             {
+                SetCrouchParameters(crouchHeight);
                 Crouch();
             }
-            else if (isCrouching && isGrounded)
+            else if (isCrouching)
             {
+                float headCheckDistance = standingHeight - crouchHeight;
+                float newHeight = standingHeight;
+
+                if (CheckHeadCollision(headCheckDistance, out float distanceToCollider))
+                {
+                    newHeight = Mathf.Max(characterController.height / 2 + distanceToCollider - crouchHeightTolerance, crouchHeight);
+                }
+
+                SetCrouchParameters(newHeight);
                 StandUp();
             }
+        }
 
-            // If the player crouch, crouch
+        private void SetCrouchParameters(float newHeight)
+        {
+            targetHeight = Mathf.Clamp(newHeight, crouchHeight, standingHeight);
+            targetYCenter = standingYCenter - (1 - (targetHeight / 2));
 
-            // Otherwise, Standup
+            float timeRatio = (targetHeight - characterController.height) / (standingHeight - crouchHeight);
+
+            if (timeRatio < 0)
+            {
+                timeRatio *= -1;
+            }
+
+            targetTransitionTime = Mathf.Clamp(timeRatio * crouchTransitionTime, 0.1f, crouchTransitionTime);
+        }
+
+        private void ProcessCrouch()
+        {
+            characterController.height = Mathf.Lerp(characterController.height, targetHeight, crouchTimeCounter / targetTransitionTime);
+            float currentYCenter = Mathf.Lerp(characterController.center.y, targetYCenter, crouchTimeCounter / targetTransitionTime);
+
+            characterController.center = new Vector3(
+                characterController.center.x,
+                currentYCenter,
+                characterController.center.z
+                );
+
+            crouchTimeCounter += Time.deltaTime;
         }
 
         private void Crouch()
         {
             if (characterController.height >= crouchHeight + crouchHeightTolerance)
             {
-                characterController.height = crouchHeight;
-                characterController.center = new Vector3(
-                    characterController.center.x, 
-                    characterController.center.y - (characterController.height / 2), 
-                    characterController.center.z
-                    );
+                ProcessCrouch();
                 isCrouching = true;
+            }
+            else
+            {
+                EnforceExactHeight();
+                crouchTimeCounter = 0;
             }
         }
 
         private void StandUp()
         {
-            float headCheckDistance = standingHeight - crouchHeight;
-
-            if (CheckHeadCollision(headCheckDistance, out float distanceToCollider))
+            if (characterController.height <= standingHeight - crouchHeightTolerance)
             {
-                
+                ProcessCrouch();
             }
             else
             {
-                characterController.height = standingHeight;
-                characterController.center = new Vector3(
-                    characterController.center.x,
-                    0,
-                    characterController.center.z
-                    );
+                EnforceExactHeight();
+                crouchTimeCounter = 0;
                 isCrouching = false;
             }
         }
 
         private void EnforceExactHeight()
         {
-
+            if (isCrouching)
+            {
+                characterController.height = targetHeight;
+                characterController.center = new Vector3(characterController.center.x, targetYCenter, characterController.center.z);
+            }
         }
 
         /// <summary>
@@ -435,15 +466,16 @@ namespace FPSPrototype.Player
         {
             distanceToCollider = -1f;
 
-            // TODO: REFACTOR THIS TO MAKE IT EASIER TO UNDERSTAND
             float sphereCastRadius = characterController.radius;
-            Vector3 playerCenterPoint = new Vector3(transform.position.x, transform.position.y + characterController.center.y, transform.position.z);
+            float relativeVerticalCenterPoint = transform.position.y + characterController.center.y;
+            Vector3 playerCenterPoint = new Vector3(transform.position.x, relativeVerticalCenterPoint, transform.position.z);
+
             float checkDistance = characterController.height / 2 + characterController.skinWidth - characterController.radius + headCheckTolerance - characterController.center.y;
             checkDistance += distance;
 
             if (Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.up, out RaycastHit ceilingHit, checkDistance, collisionMask))
             {
-                distanceToCollider = ceilingHit.distance;
+                distanceToCollider = ceilingHit.point.y - playerCenterPoint.y;
                 return true;
             }
 
