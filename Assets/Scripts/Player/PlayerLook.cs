@@ -28,10 +28,23 @@ namespace FPSPrototype.Player
         [SerializeField]
         private bool inverted = false;
 
+        [Header("Camera Position")]
+        [SerializeField]
+        private float cameraCrouchHeight = -0.4f;
+        [SerializeField]
+        private float cameraPositionTolerance = 0.025f;
+
+        private float cameraStandHeight = 0.0f;
+
         [SerializeField]
         private Camera playerCamera;
 
         private float totalPitch;
+
+        private void Awake()
+        {
+            cameraStandHeight = playerCamera.transform.localPosition.y;
+        }
 
         private void Start()
         {
@@ -63,6 +76,25 @@ namespace FPSPrototype.Player
             playerCamera.transform.localRotation = Quaternion.Euler(totalPitch, 0f, 0f);
 
             transform.Rotate(Vector3.up * lookX);
+        }
+
+        public void SetCameraCrouchPosition(float ratio)
+        {
+            float heightDifference = cameraStandHeight - cameraCrouchHeight;
+
+            float currentHeight = (heightDifference * ratio) + cameraCrouchHeight;
+
+            if (currentHeight < cameraPositionTolerance)
+            {
+                currentHeight = cameraCrouchHeight;
+            }
+            else if (currentHeight > cameraStandHeight - cameraPositionTolerance)
+            {
+                currentHeight = cameraStandHeight;
+            } 
+
+            playerCamera.transform.localPosition = new Vector3(playerCamera.transform.localPosition.x,
+                currentHeight, playerCamera.transform.localPosition.z);
         }
     }
 }

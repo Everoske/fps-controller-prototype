@@ -1492,6 +1492,8 @@ MonoBehaviour:
   maxPitch: 85
   minPitch: -85
   inverted: 0
+  cameraCrouchHeight: -0.4
+  cameraPositionTolerance: 0.025
   playerCamera: {fileID: 1551747043}
 --- !u!114 &480543015
 MonoBehaviour:
@@ -1525,7 +1527,7 @@ MonoBehaviour:
   jumpBufferTime: 0.025
   crouchHeight: 1
   crouchTransitionTime: 10
-  crouchHeightTolerance: 0.1
+  crouchHeightTolerance: 0.025
   headCheckTolerance: 0.015
   maxSlopeAngle: 75
   slideDownAngle: 55

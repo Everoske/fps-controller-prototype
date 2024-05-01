@@ -15,6 +15,8 @@ namespace FPSPrototype.Player
         private PlayerLook playerLook;
         private PlayerMovement playerMovement;
 
+        private float cameraPositionRatio = 1.0f;
+
         private void Awake()
         {
             playerActions = new PlayerInput();
@@ -46,12 +48,17 @@ namespace FPSPrototype.Player
             playerMovement.SetInputs(movementInputs);
             playerMovement.ProcessMove(playerActions.Player.Move.ReadValue<Vector2>());
             playerMovement.HandleCrouch();
+
+            cameraPositionRatio = playerMovement.GetCrouchRatio();
         }
 
         private void LateUpdate()
         {
             // Process Look Input
             playerLook.ProcessLook(playerActions.Player.Look.ReadValue<Vector2>());
+            playerLook.SetCameraCrouchPosition(cameraPositionRatio);
+
+            // TODO: Remove. For dev only. 
             if (transform.position.y < -300)
             {
                 transform.position = new Vector3(0, 2, 0);

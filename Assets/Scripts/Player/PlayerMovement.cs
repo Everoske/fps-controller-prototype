@@ -421,6 +421,7 @@ namespace FPSPrototype.Player
             }
             else
             {
+                SetCrouchParameters(standingHeight);
                 EnforceExactHeight();
                 crouchTimeCounter = 0;
                 isCrouching = false;
@@ -434,6 +435,18 @@ namespace FPSPrototype.Player
                 characterController.height = targetHeight;
                 characterController.center = new Vector3(characterController.center.x, targetYCenter, characterController.center.z);
             }
+        }
+
+        public float GetCrouchRatio()
+        {
+            float currentDistance = standingHeight - characterController.height;
+
+            if (Mathf.Approximately(currentDistance, 0))
+            {
+                return 1;
+            }
+
+            return 1 - (currentDistance / (standingHeight - crouchHeight));
         }
 
         /// <summary>
