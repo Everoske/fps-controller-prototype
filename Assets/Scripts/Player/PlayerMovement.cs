@@ -135,6 +135,10 @@ namespace FPSPrototype.Player
             crouchReleasedThisFrame = movementInputs.crouchReleasedThisFrame;
         }
 
+        /// <summary>
+        /// Determines how the player should move based on raw player input
+        /// </summary>
+        /// <param name="movementInput">Raw movement input from player</param>
         public void ProcessMove(Vector2 movementInput)
         {
             Vector3 currentMovement = new Vector3();
@@ -146,13 +150,15 @@ namespace FPSPrototype.Player
 
             currentMovement = currentMovement * targetSpeed * Time.deltaTime;
 
-            // Move the character based on all parameters
             Move(currentMovement);
         }
 
+        /// <summary>
+        /// Moves the player based on processed movement input
+        /// </summary>
+        /// <param name="movementInput">Processed movement input</param>
         private void Move(Vector3 movementInput)
         {
-            // Check if grounded
             DetermineGroundedState();
 
             Vector3 processedInput = movementInput;
@@ -169,6 +175,10 @@ namespace FPSPrototype.Player
             characterController.Move(processedInput);
         }
 
+        /// <summary>
+        /// Determines how much gravity should be applied to the player
+        /// </summary>
+        /// <returns>Gravity vector</returns>
         private Vector3 ProcessGravity()
         {
             Vector3 gravityToApply = Vector3.zero;
@@ -190,6 +200,11 @@ namespace FPSPrototype.Player
             return gravityToApply;
         }
 
+        /// <summary>
+        /// Determines how the player is affected by the slope beneath their feet
+        /// </summary>
+        /// <param name="moveInput">Intended movement vector before slope is processed</param>
+        /// <returns>Movement input with slope affects accounted for</returns>
         private Vector3 ProcessSlope(Vector3 moveInput)
         {
             Vector3 slopeMovement = moveInput;
@@ -234,6 +249,11 @@ namespace FPSPrototype.Player
             return slopeMovement;
         }
 
+        /// <summary>
+        /// Responsible for making the player jump
+        /// </summary>
+        /// <param name="movementInput">Movement input before jump is processed</param>
+        /// <returns>New movement vector with processed jump input</returns>
         private Vector3 ProcessJump(Vector3 movementInput)
         {
             Vector3 jumpInput = movementInput;
@@ -301,6 +321,9 @@ namespace FPSPrototype.Player
             return jumpInput;
         }
 
+        /// <summary>
+        /// Increments coyote time when the player is not grounded
+        /// </summary>
         private void SetCoyoteTime()
         {
             if (isGrounded)
@@ -313,6 +336,9 @@ namespace FPSPrototype.Player
             }
         }
 
+        /// <summary>
+        /// Increments the jump timer while the player should be jumping
+        /// </summary>
         private void SetJumpProgressTime()
         {
             if (jumpInProgress)
@@ -325,6 +351,9 @@ namespace FPSPrototype.Player
             }
         }
 
+        /// <summary>
+        /// Determines the window for jumping
+        /// </summary>
         private void SetJumpBufferTime()
         {
             if (jumpPressedThisFrame || jumpHeld)
@@ -337,6 +366,11 @@ namespace FPSPrototype.Player
             }
         }
 
+        /// <summary>
+        /// Determines whether the player should jump based on whether the jump
+        /// window is open
+        /// </summary>
+        /// <returns>Returns true if jump window is open</returns>
         private bool JumpCalled()
         {
             return jumpBufferCounter > 0;
