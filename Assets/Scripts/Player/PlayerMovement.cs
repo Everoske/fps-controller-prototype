@@ -79,9 +79,9 @@ namespace FPSPrototype.Player
         private float crouchHeight = 1f;
         [SerializeField]
         private float crouchTransitionTime = 10f;
-        [Tooltip("Used to check if crouch height is met")]
+        [Tooltip("Small margin used to account for floating numbers")]
         [SerializeField]
-        private float crouchHeightTolerance = 0.1f;
+        private float crouchHeightConfidence = 0.001f;
 
         private float standingHeight = 0f;
         private float targetHeight = 0f;
@@ -92,7 +92,6 @@ namespace FPSPrototype.Player
         private float crouchTimeCounter = 0.0f;
 
         private bool isCrouching = false;
-        private bool attemptingToStand = false;
         private bool crouchHeld = false;
         private bool crouchReleasedThisFrame = false;
         private bool crouchPressedThisFrame = false;
@@ -343,6 +342,9 @@ namespace FPSPrototype.Player
             return jumpBufferCounter > 0;
         }
 
+        /// <summary>
+        /// Determines if the player should crouch or stand up during a given frame
+        /// </summary>
         public void HandleCrouch()
         {
             bool canInitiateCrouch = isGrounded && (crouchPressedThisFrame || crouchHeld);
@@ -362,7 +364,8 @@ namespace FPSPrototype.Player
 
                 if (CheckHeadCollision(headCheckDistance, out float distanceToCollider))
                 {
-                    newHeight = Mathf.Max(characterController.height / 2 + distanceToCollider - crouchHeightTolerance, crouchHeight);
+                    float heightTolerance = headCheckTolerance + characterController.skinWidth;
+                    newHeight = Mathf.Max(characterController.height / 2 + distanceToCollider - heightTolerance, crouchHeight);
                 }
 
                 SetCrouchParameters(newHeight);
@@ -370,6 +373,11 @@ namespace FPSPrototype.Player
             }
         }
 
+        /// <summary>
+        /// Sets target height, target center, and target transition time for
+        /// determining how the player should crouch
+        /// </summary>
+        /// <param name="newHeight">New target height for the player's collider</param>
         private void SetCrouchParameters(float newHeight)
         {
             targetHeight = Mathf.Clamp(newHeight, crouchHeight, standingHeight);
@@ -385,6 +393,10 @@ namespace FPSPrototype.Player
             targetTransitionTime = Mathf.Clamp(timeRatio * crouchTransitionTime, 0.1f, crouchTransitionTime);
         }
 
+        /// <summary>
+        /// Smoothly shrinks or increases the player's collider's height and center
+        /// until they reach the target height and center
+        /// </summary>
         private void ProcessCrouch()
         {
             characterController.height = Mathf.Lerp(characterController.height, targetHeight, crouchTimeCounter / targetTransitionTime);
@@ -399,9 +411,12 @@ namespace FPSPrototype.Player
             crouchTimeCounter += Time.deltaTime;
         }
 
+        /// <summary>
+        /// Decreases the player's collider's height to the specified crouching height
+        /// </summary>
         private void Crouch()
         {
-            if (characterController.height >= crouchHeight + crouchHeightTolerance)
+            if (characterController.height >= crouchHeight + crouchHeightConfidence)
             {
                 ProcessCrouch();
                 isCrouching = true;
@@ -413,9 +428,14 @@ namespace FPSPrototype.Player
             }
         }
 
+
+        /// <summary>
+        /// Attempts to make the player's collider match the standing height
+        /// or the maximum height they can stand
+        /// </summary>
         private void StandUp()
         {
-            if (characterController.height <= standingHeight - crouchHeightTolerance)
+            if (characterController.height <= standingHeight - crouchHeightConfidence)
             {
                 ProcessCrouch();
             }
@@ -428,6 +448,10 @@ namespace FPSPrototype.Player
             }
         }
 
+        /// <summary>
+        /// Ensures that the player's collider is of the exact height and
+        /// center as its target height and center
+        /// </summary>
         private void EnforceExactHeight()
         {
             if (isCrouching)
@@ -435,18 +459,6 @@ namespace FPSPrototype.Player
                 characterController.height = targetHeight;
                 characterController.center = new Vector3(characterController.center.x, targetYCenter, characterController.center.z);
             }
-        }
-
-        public float GetCrouchRatio()
-        {
-            float currentDistance = standingHeight - characterController.height;
-
-            if (Mathf.Approximately(currentDistance, 0))
-            {
-                return 1;
-            }
-
-            return 1 - (currentDistance / (standingHeight - crouchHeight));
         }
 
         /// <summary>

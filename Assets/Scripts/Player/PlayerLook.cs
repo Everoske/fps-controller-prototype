@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.InputSystem.XR;
 using UnityEngine.Windows;
 
 /*
@@ -28,13 +29,9 @@ namespace FPSPrototype.Player
         [SerializeField]
         private bool inverted = false;
 
-        [Header("Camera Position")]
-        [SerializeField]
-        private float cameraCrouchHeight = -0.4f;
-        [SerializeField]
-        private float cameraPositionTolerance = 0.025f;
-
-        private float cameraStandHeight = 0.0f;
+        private CharacterController characterController;
+        private Vector3 initialCameraPosition;
+        private float initialControllerHeight;
 
         [SerializeField]
         private Camera playerCamera;
@@ -43,7 +40,9 @@ namespace FPSPrototype.Player
 
         private void Awake()
         {
-            cameraStandHeight = playerCamera.transform.localPosition.y;
+            characterController = GetComponent<CharacterController>();
+            initialControllerHeight = characterController.height;
+            initialCameraPosition = playerCamera.transform.localPosition;
         }
 
         private void Start()
@@ -78,23 +77,15 @@ namespace FPSPrototype.Player
             transform.Rotate(Vector3.up * lookX);
         }
 
-        public void SetCameraCrouchPosition(float ratio)
+        /// <summary>
+        /// Sets the camera's position relative to the player's current crouching height
+        /// </summary>
+        public void MoveCamera()
         {
-            float heightDifference = cameraStandHeight - cameraCrouchHeight;
+            Vector3 halfHeightDifference = new Vector3(0, (initialControllerHeight - characterController.height) / 2, 0f) - characterController.center;
+            Vector3 desiredCameraPosition = initialCameraPosition - halfHeightDifference;
 
-            float currentHeight = (heightDifference * ratio) + cameraCrouchHeight;
-
-            if (currentHeight < cameraPositionTolerance)
-            {
-                currentHeight = cameraCrouchHeight;
-            }
-            else if (currentHeight > cameraStandHeight - cameraPositionTolerance)
-            {
-                currentHeight = cameraStandHeight;
-            } 
-
-            playerCamera.transform.localPosition = new Vector3(playerCamera.transform.localPosition.x,
-                currentHeight, playerCamera.transform.localPosition.z);
+            playerCamera.transform.localPosition = desiredCameraPosition;
         }
     }
 }
