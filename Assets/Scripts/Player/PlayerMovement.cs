@@ -110,6 +110,18 @@ namespace FPSPrototype.Player
 
         private bool playerOnSteepSlope = false;
 
+        [Header("Stair Handling")]
+        [SerializeField]
+        private float maxStepHeight = 0.5f;
+        [Tooltip("Minimum depth of a step required to ascend/descend")]
+        [SerializeField]
+        private float minStepDepth = 0.25f;
+        [SerializeField]
+        private float stepHeightTolerance = 0.01f;
+
+        private bool isSteppingUp = false;
+        private bool isSteppingDown = false;
+
         private CharacterController characterController;
 
         private void Awake()
@@ -162,6 +174,8 @@ namespace FPSPrototype.Player
             DetermineGroundedState();
 
             Vector3 processedInput = movementInput;
+
+            DetectStepUp(processedInput);
 
             processedInput = ProcessSlope(processedInput);
 
@@ -559,6 +573,80 @@ namespace FPSPrototype.Player
             return isCrouching ? crouchSpeed : isRunning ? sprintSpeed : walkSpeed;
         }
 
+        private void DetectStepUp(Vector3 moveDirection)
+        {
+            if (!isGrounded) return;
+
+            //float sphereYOrigin = transform.position.y - (characterController.height / 2) - characterController.skinWidth + maxStepHeight;
+            //Vector3 sphereOrigin = new Vector3(transform.position.x, sphereYOrigin, transform.position.z);
+
+            
+            List<RaycastHit> hits = new List<RaycastHit>();
+            float playerGroundHeight = transform.position.y - (characterController.height / 2) - characterController.skinWidth;
+            Vector3 rayOrigin = new Vector3(transform.position.x, playerGroundHeight + maxStepHeight, transform.position.z);
+            float rayDistance = moveDirection.magnitude + characterController.radius + characterController.skinWidth;
+
+            while (rayOrigin.y > playerGroundHeight)
+            {
+                if (Physics.Raycast(rayOrigin, moveDirection.normalized, out RaycastHit currentHit, rayDistance, collisionMask))
+                {
+                    hits.Add(currentHit);
+                }
+
+                rayOrigin.y = Mathf.Max(playerGroundHeight, rayOrigin.y - 0.01f);
+            }
+
+            if (hits.Count > 0)
+            {
+                RaycastHit hitUpper = hits[0];
+                
+                Vector3 sphereOrigin = new Vector3(transform.position.x, hitUpper.point.y + characterController.radius + stepHeightTolerance, transform.position.z);
+                float maxSphereDistance = minStepDepth + characterController.radius + characterController.skinWidth + hitUpper.distance;
+
+                if (Physics.SphereCast(sphereOrigin, characterController.radius, moveDirection.normalized, out RaycastHit depthHit, maxSphereDistance, collisionMask))
+                {
+                    float depth = depthHit.distance - (hitUpper.distance - characterController.radius);
+
+                    if (depth < minStepDepth)
+                    {
+                        Debug.Log("Cannot step");
+                        return;
+                    }
+                }
+
+                //isSteppingUp = true;
+                moveDirection.y = hitUpper.point.y;
+
+#if UNITY_EDITOR
+                Debug.DrawRay(transform.position, transform.TransformDirection(moveDirection), Color.blue, 0.5f);
+#endif
+
+            }
+        }
+
+        private void DetectStepDown(Vector3 moveDirection)
+        {
+            // Project a series of ray casts down to the maximum step depth along 
+            // the given vector
+            
+            // If any of the rays are equal to the player's current ground level and they
+            // are closer to the player than the player's diameter, return
+
+            // Add the first ray hit that satisfies the max step height and the first ray hit that
+            // matches the player's current ground level
+
+            // lower step edge = first ray hit where hit.y < max step height
+
+            // current step edge = first ray hit where hit.y == player.position.y +/- error margin
+
+            // Using that ray hit, cast another ray in the inverse direction of the original movement
+            // Determine if the angle between the tangent line of the collision and the inversion direction
+            // is greater than the min hit angle and less than the max hit angle
+
+            // Determine the distance
+
+        }
+
         private void OnDrawGizmos()
         {
             if (Application.isPlaying)
@@ -570,6 +658,10 @@ namespace FPSPrototype.Player
                 float distance2 = characterController.height / 2 + characterController.skinWidth - characterController.radius + headCheckTolerance;
                 Vector3 sphereOrigin2 = new Vector3(transform.position.x, transform.position.y + characterController.center.y + distance2, transform.position.z);
                 Gizmos.DrawWireSphere(sphereOrigin2, characterController.radius);
+
+                float rayYPos = transform.position.y - (characterController.height / 2) - characterController.skinWidth;
+                Vector3 rayPosition = new Vector3(transform.position.x, rayYPos, transform.position.z);
+                Gizmos.DrawRay(rayPosition, transform.forward);
             }
         }
     }
