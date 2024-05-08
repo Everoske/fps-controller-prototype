@@ -118,6 +118,8 @@ namespace FPSPrototype.Player
         private float minStepDepth = 0.25f;
         [SerializeField]
         private float stepHeightTolerance = 0.01f;
+        [SerializeField]
+        private float ascendStepRate = 0.1f;
 
         private bool isSteppingUp = false;
         private bool isSteppingDown = false;
@@ -175,7 +177,7 @@ namespace FPSPrototype.Player
 
             Vector3 processedInput = movementInput;
 
-            DetectStepUp(processedInput);
+            processedInput = DetectStepUp(processedInput);
 
             processedInput = ProcessSlope(processedInput);
 
@@ -573,55 +575,36 @@ namespace FPSPrototype.Player
             return isCrouching ? crouchSpeed : isRunning ? sprintSpeed : walkSpeed;
         }
 
-        private void DetectStepUp(Vector3 moveDirection)
+        private Vector3 DetectStepUp(Vector3 moveDirection)
         {
-            if (!isGrounded) return;
 
-            //float sphereYOrigin = transform.position.y - (characterController.height / 2) - characterController.skinWidth + maxStepHeight;
-            //Vector3 sphereOrigin = new Vector3(transform.position.x, sphereYOrigin, transform.position.z);
+            Vector3 stepUp = moveDirection;
 
-            
-            List<RaycastHit> hits = new List<RaycastHit>();
             float playerGroundHeight = transform.position.y - (characterController.height / 2) - characterController.skinWidth;
-            Vector3 rayOrigin = new Vector3(transform.position.x, playerGroundHeight + maxStepHeight, transform.position.z);
-            float rayDistance = moveDirection.magnitude + characterController.radius + characterController.skinWidth;
+            Vector3 lowerOrigin = new Vector3(transform.position.x, playerGroundHeight, transform.position.z);
+            float rayDistance = moveDirection.magnitude + characterController.radius + characterController.skinWidth + 0.1f;
 
-            while (rayOrigin.y > playerGroundHeight)
+            if (Physics.Raycast(lowerOrigin, moveDirection.normalized, out RaycastHit lowerHit, rayDistance, collisionMask))
             {
-                if (Physics.Raycast(rayOrigin, moveDirection.normalized, out RaycastHit currentHit, rayDistance, collisionMask))
+                float stepSlopeAngle = Vector3.Angle(lowerHit.normal, transform.up);
+
+                if (stepSlopeAngle >= maxSlopeAngle)
                 {
-                    hits.Add(currentHit);
-                }
-
-                rayOrigin.y = Mathf.Max(playerGroundHeight, rayOrigin.y - 0.01f);
-            }
-
-            if (hits.Count > 0)
-            {
-                RaycastHit hitUpper = hits[0];
-                
-                Vector3 sphereOrigin = new Vector3(transform.position.x, hitUpper.point.y + characterController.radius + stepHeightTolerance, transform.position.z);
-                float maxSphereDistance = minStepDepth + characterController.radius + characterController.skinWidth + hitUpper.distance;
-
-                if (Physics.SphereCast(sphereOrigin, characterController.radius, moveDirection.normalized, out RaycastHit depthHit, maxSphereDistance, collisionMask))
-                {
-                    float depth = depthHit.distance - (hitUpper.distance - characterController.radius);
-
-                    if (depth < minStepDepth)
+                    Vector3 upperOrigin = new Vector3(transform.position.x, playerGroundHeight + maxStepHeight + stepHeightTolerance, transform.position.z);
+                    rayDistance += minStepDepth;
+                    if (!Physics.Raycast(upperOrigin, moveDirection.normalized, out RaycastHit upperHit, rayDistance, collisionMask))
                     {
-                        Debug.Log("Cannot step");
-                        return;
+                        stepUp.y += ascendStepRate;
+                        isSteppingUp = true;
+                        return stepUp;
                     }
                 }
 
-                //isSteppingUp = true;
-                moveDirection.y = hitUpper.point.y;
-
-#if UNITY_EDITOR
-                Debug.DrawRay(transform.position, transform.TransformDirection(moveDirection), Color.blue, 0.5f);
-#endif
-
+                
             }
+
+            isSteppingUp = false;
+            return stepUp;
         }
 
         private void DetectStepDown(Vector3 moveDirection)
