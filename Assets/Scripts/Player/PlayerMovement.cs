@@ -111,16 +111,21 @@ namespace FPSPrototype.Player
 
         private bool playerOnSteepSlope = false;
 
-        [Header("Stair Handling")]
+        [Header("Step Handling")]
         [SerializeField]
         private float maxStepHeight = 0.5f;
-        [Tooltip("Minimum depth of a step required to ascend/descend")]
+        [Tooltip("Minimum depth of a step required to ascend")]
         [SerializeField]
         private float minStepDepth = 0.25f;
         [SerializeField]
         private float stepHeightTolerance = 0.01f;
         [SerializeField]
         private float ascendStepRate = 20f;
+
+        [Header("RigidBody Interactions")]
+
+
+        private Vector3 normalizedDirection = Vector3.zero;
 
         private CharacterController characterController;
 
@@ -186,6 +191,7 @@ namespace FPSPrototype.Player
             Debug.DrawRay(transform.position, transform.TransformDirection(processedInput), Color.red, 0.5f);
 #endif
 
+            normalizedDirection = processedInput.normalized;
             characterController.Move(processedInput);
         }
 
@@ -605,6 +611,20 @@ namespace FPSPrototype.Player
             }
 
             return stepUp;
+        }
+
+        private void OnControllerColliderHit(ControllerColliderHit hit)
+        {
+            Rigidbody body = hit.collider.attachedRigidbody;
+
+            if (body != null && !body.isKinematic)
+            {
+                if (hit.moveDirection.y < -0.3f) return;
+
+                Vector3 pushDirection = new Vector3(hit.moveDirection.x, 0, hit.moveDirection.z);
+
+                body.velocity = pushDirection * DetermineSpeed() * Time.deltaTime * 50;
+            }
         }
 
         private void OnDrawGizmos()
