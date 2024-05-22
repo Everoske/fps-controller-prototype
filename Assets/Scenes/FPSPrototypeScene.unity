@@ -1638,7 +1638,8 @@ MonoBehaviour:
   maxStepHeight: 0.5
   minStepDepth: 0.25
   stepHeightTolerance: 0.01
-  ascendStepRate: 0.1
+  ascendStepRate: 20
+  crouchAscendStepRate: 5
 --- !u!114 &480543016
 MonoBehaviour:
   m_ObjectHideFlags: 0

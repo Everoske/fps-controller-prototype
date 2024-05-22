@@ -67,6 +67,7 @@ namespace FPSPrototype.Player
         private bool jumpPressedThisFrame = false;
         private bool jumpHeld = false;
         private bool jumpInProgress = false;
+        private bool playerHasJumped = false;
 
         private bool jumpHeldContinuously = false;
 
@@ -119,10 +120,7 @@ namespace FPSPrototype.Player
         [SerializeField]
         private float stepHeightTolerance = 0.01f;
         [SerializeField]
-        private float ascendStepRate = 0.1f;
-
-        private bool isSteppingUp = false;
-        private bool isSteppingDown = false;
+        private float ascendStepRate = 20f;
 
         private CharacterController characterController;
 
@@ -177,7 +175,7 @@ namespace FPSPrototype.Player
 
             Vector3 processedInput = movementInput;
 
-            processedInput = DetectStepUp(processedInput);
+            processedInput = ProcessStepUp(processedInput);
 
             processedInput = ProcessSlope(processedInput);
 
@@ -283,6 +281,7 @@ namespace FPSPrototype.Player
             if (canJump && !playerOnSteepSlope && !jumpInProgress && JumpCalled())
             {
                 jumpInProgress = true;
+                playerHasJumped = true;
                 jumpHeldContinuously = jumpHeld;
                 jumpBufferCounter = 0;
 
@@ -372,7 +371,7 @@ namespace FPSPrototype.Player
         /// </summary>
         private void SetJumpBufferTime()
         {
-            if (jumpPressedThisFrame || jumpHeld)
+            if (jumpPressedThisFrame)
             {
                 jumpBufferCounter = jumpBufferTime;
             }
@@ -523,6 +522,7 @@ namespace FPSPrototype.Player
             if (Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.down, out groundHit, distance, collisionMask))
             {
                 isGrounded = true;
+                playerHasJumped = false;
             }
             else
             {
@@ -575,12 +575,16 @@ namespace FPSPrototype.Player
             return isCrouching ? crouchSpeed : isRunning ? sprintSpeed : walkSpeed;
         }
 
-        private Vector3 DetectStepUp(Vector3 moveDirection)
+        private Vector3 ProcessStepUp(Vector3 moveDirection)
         {
+            if (playerHasJumped)
+            {
+                return moveDirection;
+            }
 
             Vector3 stepUp = moveDirection;
 
-            float playerGroundHeight = transform.position.y - (characterController.height / 2) - characterController.skinWidth;
+            float playerGroundHeight = transform.position.y - (standingHeight / 2) - characterController.skinWidth;
             Vector3 lowerOrigin = new Vector3(transform.position.x, playerGroundHeight, transform.position.z);
             float rayDistance = moveDirection.magnitude + characterController.radius + characterController.skinWidth + 0.1f;
 
@@ -591,43 +595,16 @@ namespace FPSPrototype.Player
                 if (stepSlopeAngle >= maxSlopeAngle)
                 {
                     Vector3 upperOrigin = new Vector3(transform.position.x, playerGroundHeight + maxStepHeight + stepHeightTolerance, transform.position.z);
-                    rayDistance += minStepDepth;
+                    rayDistance += minStepDepth - 0.2f;
                     if (!Physics.Raycast(upperOrigin, moveDirection.normalized, out RaycastHit upperHit, rayDistance, collisionMask))
                     {
-                        stepUp.y += ascendStepRate;
-                        isSteppingUp = true;
+                        stepUp.y += ascendStepRate * Time.deltaTime;
                         return stepUp;
                     }
                 }
-
-                
             }
 
-            isSteppingUp = false;
             return stepUp;
-        }
-
-        private void DetectStepDown(Vector3 moveDirection)
-        {
-            // Project a series of ray casts down to the maximum step depth along 
-            // the given vector
-            
-            // If any of the rays are equal to the player's current ground level and they
-            // are closer to the player than the player's diameter, return
-
-            // Add the first ray hit that satisfies the max step height and the first ray hit that
-            // matches the player's current ground level
-
-            // lower step edge = first ray hit where hit.y < max step height
-
-            // current step edge = first ray hit where hit.y == player.position.y +/- error margin
-
-            // Using that ray hit, cast another ray in the inverse direction of the original movement
-            // Determine if the angle between the tangent line of the collision and the inversion direction
-            // is greater than the min hit angle and less than the max hit angle
-
-            // Determine the distance
-
         }
 
         private void OnDrawGizmos()
