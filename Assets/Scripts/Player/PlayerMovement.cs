@@ -123,9 +123,8 @@ namespace FPSPrototype.Player
         private float ascendStepRate = 20f;
 
         [Header("RigidBody Interactions")]
-
-
-        private Vector3 normalizedDirection = Vector3.zero;
+        [SerializeField]
+        private float playerForceMultiplier = 50f;
 
         private CharacterController characterController;
 
@@ -191,7 +190,6 @@ namespace FPSPrototype.Player
             Debug.DrawRay(transform.position, transform.TransformDirection(processedInput), Color.red, 0.5f);
 #endif
 
-            normalizedDirection = processedInput.normalized;
             characterController.Move(processedInput);
         }
 
@@ -623,7 +621,7 @@ namespace FPSPrototype.Player
 
                 Vector3 pushDirection = new Vector3(hit.moveDirection.x, 0, hit.moveDirection.z);
 
-                body.velocity = pushDirection * DetermineSpeed() * Time.deltaTime * 50;
+                body.AddForce(pushDirection * targetSpeed * Time.deltaTime * playerForceMultiplier);
             }
         }
 
