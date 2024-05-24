@@ -124,7 +124,7 @@ namespace FPSPrototype.Player
 
         [Header("RigidBody Interactions")]
         [SerializeField]
-        private float playerForceMultiplier = 50f;
+        private float playerForceMultiplier = 200f;
 
         private CharacterController characterController;
 
