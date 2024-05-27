@@ -523,7 +523,7 @@ namespace FPSPrototype.Player
             Vector3 playerCenterPoint = new Vector3(transform.position.x, transform.position.y, transform.position.z);
             float distance = standingHeight / 2 + characterController.skinWidth - characterController.radius + groundCheckTolerance;
 
-            if (Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.down, out groundHit, distance, collisionMask))
+            if (Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.down, out groundHit, distance, collisionMask, QueryTriggerInteraction.Ignore))
             {
                 isGrounded = true;
                 playerHasJumped = false;
@@ -552,7 +552,7 @@ namespace FPSPrototype.Player
             float checkDistance = characterController.height / 2 + characterController.skinWidth - characterController.radius + headCheckTolerance - characterController.center.y;
             checkDistance += distance;
 
-            if (Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.up, out RaycastHit ceilingHit, checkDistance, collisionMask))
+            if (Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.up, out RaycastHit ceilingHit, checkDistance, collisionMask, QueryTriggerInteraction.Ignore))
             {
                 distanceToCollider = ceilingHit.point.y - playerCenterPoint.y;
                 return true;
@@ -592,7 +592,7 @@ namespace FPSPrototype.Player
             Vector3 lowerOrigin = new Vector3(transform.position.x, playerGroundHeight, transform.position.z);
             float rayDistance = moveDirection.magnitude + characterController.radius + characterController.skinWidth + 0.1f;
 
-            if (Physics.Raycast(lowerOrigin, moveDirection.normalized, out RaycastHit lowerHit, rayDistance, collisionMask))
+            if (Physics.Raycast(lowerOrigin, moveDirection.normalized, out RaycastHit lowerHit, rayDistance, collisionMask, QueryTriggerInteraction.Ignore))
             {
                 float stepSlopeAngle = Vector3.Angle(lowerHit.normal, transform.up);
 
@@ -600,7 +600,7 @@ namespace FPSPrototype.Player
                 {
                     Vector3 upperOrigin = new Vector3(transform.position.x, playerGroundHeight + maxStepHeight + stepHeightTolerance, transform.position.z);
                     rayDistance += minStepDepth - 0.2f;
-                    if (!Physics.Raycast(upperOrigin, moveDirection.normalized, out RaycastHit upperHit, rayDistance, collisionMask))
+                    if (!Physics.Raycast(upperOrigin, moveDirection.normalized, out RaycastHit upperHit, rayDistance, collisionMask, QueryTriggerInteraction.Ignore))
                     {
                         stepUp.y += ascendStepRate * Time.deltaTime;
                         return stepUp;
