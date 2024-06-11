@@ -21,7 +21,7 @@ public class StaticMover : MonoBehaviour
         //Debug.Log(controllers.Count);
         foreach (var controller in controllers)
         {
-            controller.Move(movementDirection * movementSpeed * Time.deltaTime);
+            controller.Move(movementDirection * movementSpeed * Time.fixedDeltaTime);
         }
     }
 

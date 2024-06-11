@@ -137,6 +137,14 @@ namespace FPSPrototype.Player
             standingYCenter = characterController.center.y;
         }
 
+        private void FixedUpdate()
+        {
+            if (groundHit.rigidbody !=  null)
+            {
+                characterController.Move(groundHit.rigidbody.velocity * Time.fixedDeltaTime);
+            }
+        }
+
         /// <summary>
         /// Determines player behavior based on their input
         /// </summary>
