@@ -18,7 +18,6 @@ public class StaticMover : MonoBehaviour
 
     private void FixedUpdate()
     {
-        //Debug.Log(controllers.Count);
         foreach (var controller in controllers)
         {
             controller.Move(movementDirection * movementSpeed * Time.fixedDeltaTime);
@@ -27,7 +26,6 @@ public class StaticMover : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        Debug.Log("Trigger Entered");
         if (other.TryGetComponent<CharacterController>(out CharacterController controller))
         {
             controllers.Add(controller);
