@@ -42,7 +42,6 @@ namespace FPSPrototype.Player
 
         private bool isGrounded = false;
         private bool wasGroundedLastFrame = false;
-        private float yPositionBeforeMove = 0.0f;
         private RaycastHit groundHit;
 
         private float timeSinceLeftGround = 0.0f;
@@ -123,8 +122,8 @@ namespace FPSPrototype.Player
         private float minStepDepth = 0.25f;
         [SerializeField]
         private float stepHeightTolerance = 0.01f;
-        [SerializeField]
-        private float ascendStepRate = 20f;
+
+        private bool steppingUp = false;
 
         [SerializeField]
         private bool shouldSnapDown = true;
@@ -146,7 +145,7 @@ namespace FPSPrototype.Player
 
         private void FixedUpdate()
         {
-            if (groundHit.rigidbody !=  null)
+            if (groundHit.rigidbody !=  null && isGrounded)
             {
                 characterController.Move(groundHit.rigidbody.velocity * Time.fixedDeltaTime);
             }
@@ -194,20 +193,18 @@ namespace FPSPrototype.Player
 
             Vector3 processedInput = movementInput;
 
-            processedInput = ProcessStepUp(processedInput);
+            DetermineSteppingUp(processedInput);
 
             processedInput = ProcessSlope(processedInput);
 
-            processedInput += ProcessGravity();
             processedInput = ProcessJump(processedInput);
+            processedInput += ProcessGravity();
+            
 
 #if UNITY_EDITOR
             Debug.DrawRay(transform.position, transform.TransformDirection(processedInput), Color.red, 0.5f);
 #endif
-            //SnapToGround();
-            yPositionBeforeMove = transform.position.y;
             characterController.Move(processedInput);
-            SnapToGround();
         }
 
         /// <summary>
@@ -229,7 +226,11 @@ namespace FPSPrototype.Player
             {
                 timeSinceLeftGround = 0.0f;
                 currentGravity = baseGravity;
-                //gravityToApply = new Vector3(0f, gravityGrounded * Time.deltaTime, 0f);
+                if (shouldSnapDown)
+                {
+                    gravityToApply = new Vector3(0f, gravityGrounded * Time.deltaTime, 0f);
+                }
+                
             }
 
             return gravityToApply;
@@ -242,6 +243,8 @@ namespace FPSPrototype.Player
         /// <returns>Movement input with slope affects accounted for</returns>
         private Vector3 ProcessSlope(Vector3 moveInput)
         {
+            if (steppingUp) return moveInput;
+
             Vector3 slopeMovement = moveInput;
 
             if (isGrounded)
@@ -301,6 +304,7 @@ namespace FPSPrototype.Player
 
             if (canJump && !playerOnSteepSlope && !jumpInProgress && JumpCalled())
             {
+                shouldSnapDown = false;
                 jumpInProgress = true;
                 playerHasJumped = true;
                 jumpHeldContinuously = jumpHeld;
@@ -543,15 +547,13 @@ namespace FPSPrototype.Player
             float maxGroundDistance = standingHeight / 2 + characterController.skinWidth - characterController.radius + groundCheckTolerance;
             float sphereCastDistance = maxGroundDistance + snapDownDepth;
 
-
-
             if (Physics.SphereCast(playerCenterPoint, sphereCastRadius, Vector3.down, out groundHit, sphereCastDistance, collisionMask, QueryTriggerInteraction.Ignore))
             {
                 if (groundHit.distance < maxGroundDistance)
                 {
                     isGrounded = true;
                     playerHasJumped = false;
-                } else if (wasGroundedLastFrame)
+                } else if (wasGroundedLastFrame && !playerHasJumped)
                 {
                     shouldSnapDown = true;
                 }
@@ -562,26 +564,6 @@ namespace FPSPrototype.Player
                 shouldSnapDown = false;
             }
         }
-
-        private void SnapToGround()
-        {
-            if (playerHasJumped) shouldSnapDown = false;
-
-            if (shouldSnapDown)
-            {
-                float snapDownDistance = groundHit.distance -
-                    (standingHeight / 2 + characterController.skinWidth - characterController.radius);
-
-                if (!Mathf.Approximately(transform.position.y, yPositionBeforeMove))
-                {
-                    float heightDifference = yPositionBeforeMove - transform.position.y;
-                    snapDownDistance -= heightDifference;
-                }
-
-                transform.position = new Vector3(transform.position.x, transform.position.y - snapDownDistance, transform.position.z);
-            }
-        }
-
 
         /// <summary>
         /// Checks whether a collision occurs above the player
@@ -627,14 +609,20 @@ namespace FPSPrototype.Player
             return isCrouching ? crouchSpeed : isRunning ? sprintSpeed : walkSpeed;
         }
 
-        private Vector3 ProcessStepUp(Vector3 moveDirection)
+        /// <summary>
+        /// Determines whether the player should step up such as when they are going up stairs.
+        /// Sets the Character Controller's step offset accordingly as to prevent the player from
+        /// bouncing when not stepping up.
+        /// </summary>
+        /// <param name="moveDirection">Movement vector of player</param>
+        private void DetermineSteppingUp(Vector3 moveDirection)
         {
-            if (playerHasJumped)
+            steppingUp = false;
+            if (playerHasJumped || !isGrounded)
             {
-                return moveDirection;
+                characterController.stepOffset = 0.0f;
+                return;
             }
-
-            Vector3 stepUp = moveDirection;
 
             float playerGroundHeight = transform.position.y - (standingHeight / 2) - characterController.skinWidth;
             Vector3 lowerOrigin = new Vector3(transform.position.x, playerGroundHeight, transform.position.z);
@@ -650,22 +638,15 @@ namespace FPSPrototype.Player
                     rayDistance += minStepDepth - 0.2f;
                     if (!Physics.Raycast(upperOrigin, moveDirection.normalized, out RaycastHit upperHit, rayDistance, collisionMask, QueryTriggerInteraction.Ignore))
                     {
-                        stepUp.y += ascendStepRate * Time.deltaTime;
                         shouldSnapDown = false;
-                        return stepUp;
+                        steppingUp = true;
+                        characterController.stepOffset = maxStepHeight;
                     }
                 }
+            } else
+            {
+                characterController.stepOffset = 0.0f;
             }
-
-            return stepUp;
-        }
-
-        private void SnapUp(float snapHeight)
-        {
-            // Sphere head check plus the amount given to ensure there are no collisions above
-
-            // Move the character up a slight bit higher than the given height
-
         }
 
         private void OnControllerColliderHit(ControllerColliderHit hit)
@@ -694,7 +675,7 @@ namespace FPSPrototype.Player
                 Vector3 sphereOrigin2 = new Vector3(transform.position.x, transform.position.y + characterController.center.y + distance2, transform.position.z);
                 Gizmos.DrawWireSphere(sphereOrigin2, characterController.radius);
 
-                float rayYPos = transform.position.y - (characterController.height / 2) - characterController.skinWidth;
+                float rayYPos = transform.position.y - (standingHeight / 2) - characterController.skinWidth;
                 Vector3 rayPosition = new Vector3(transform.position.x, rayYPos, transform.position.z);
                 Gizmos.DrawRay(rayPosition, transform.forward);
             }
