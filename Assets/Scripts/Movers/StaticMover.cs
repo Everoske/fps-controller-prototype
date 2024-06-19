@@ -9,26 +9,16 @@ public class StaticMover : MonoBehaviour
     [SerializeField]
     public float movementSpeed = 5.0f;
 
-    private List<CharacterController> controllers = new List<CharacterController>();
-
     private void Awake()
     {
         movementDirection = transform.rotation * movementDirection;
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnTriggerStay(Collider other)
     {
         if (other.TryGetComponent<CharacterController>(out CharacterController controller))
         {
-            controllers.Add(controller);
-        }
-    }
-
-    private void OnTriggerExit(Collider other)
-    {
-        if (other.TryGetComponent<CharacterController>(out CharacterController controller))
-        {
-            controllers.Remove(controller);
+            controller.Move(movementDirection * movementSpeed * Time.deltaTime);
         }
     }
 

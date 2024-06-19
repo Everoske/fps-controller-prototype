@@ -143,14 +143,6 @@ namespace FPSPrototype.Player
             standingYCenter = characterController.center.y;
         }
 
-        private void FixedUpdate()
-        {
-            if (groundHit.rigidbody !=  null && isGrounded)
-            {
-                characterController.Move(groundHit.rigidbody.velocity * Time.fixedDeltaTime);
-            }
-        }
-
         /// <summary>
         /// Determines player behavior based on their input
         /// </summary>
@@ -204,6 +196,7 @@ namespace FPSPrototype.Player
 #if UNITY_EDITOR
             Debug.DrawRay(transform.position, transform.TransformDirection(processedInput), Color.red, 0.5f);
 #endif
+
             characterController.Move(processedInput);
         }
 
@@ -556,6 +549,11 @@ namespace FPSPrototype.Player
                 } else if (wasGroundedLastFrame && !playerHasJumped)
                 {
                     shouldSnapDown = true;
+
+                    if (groundHit.transform.TryGetComponent<DynamicMover>(out DynamicMover mover))
+                    {
+                        shouldSnapDown = false;
+                    }
                 }
             }
             else

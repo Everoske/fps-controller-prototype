@@ -20,4 +20,9 @@ public class WaypointPath : MonoBehaviour
 
         return nextWaypointIndex;
     }
+
+    public int GetTotalWaypoints()
+    {
+        return transform.childCount;
+    }
 }

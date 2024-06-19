@@ -2530,8 +2530,6 @@ MonoBehaviour:
   snapDownDepth: 0.5
   minStepDepth: 0.25
   stepHeightTolerance: 0.01
-  ascendStepRate: 20
-  stepHeightOrigin: {fileID: 776023366}
   shouldSnapDown: 1
   playerForceMultiplier: 200
 --- !u!114 &480543016
@@ -5163,6 +5161,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   path: {fileID: 380101183}
+  shouldLoop: 1
   speed: 5
 --- !u!65 &1066548246
 BoxCollider:
@@ -5183,8 +5182,8 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 1, y: 2, z: 1}
-  m_Center: {x: 0, y: 1.5, z: 0}
+  m_Size: {x: 1, y: 10, z: 1}
+  m_Center: {x: 0, y: 5.5, z: 0}
 --- !u!1 &1140328630
 GameObject:
   m_ObjectHideFlags: 0
