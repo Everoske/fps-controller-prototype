@@ -13,17 +13,18 @@ public class DynamicMover : MonoBehaviour
     [SerializeField]
     private float speed = 5f;
 
+    [Tooltip("Threshold for which an object on the moving platform is considered grounded")]
+    [SerializeField]
+    private float objectGroundedDistance = 1f;
+
     private Rigidbody moverRB;
 
     private int targetWaypointIndex;
 
-    private float startTime = 0.0f;
     private float journeyLength = 0.0f;
     private int waypointsVisited = 0;
     private float timePassed = 0.0f;
 
-
-    private Vector3 previousPosition;
     private Transform previousWaypoint;
     private Transform targetWaypoint;
 
@@ -66,12 +67,23 @@ public class DynamicMover : MonoBehaviour
 
         if (!platformMovingDown)
         {
-            MoveRiders(riderMovement);
+            MoveRidersBefore(riderMovement);
             moverRB.MovePosition(movementVector);
         } else
         {
             moverRB.MovePosition(movementVector);
             MoveRiders(riderMovement);
+        }
+    }
+
+    private void MoveRidersBefore(Vector3 movementVector)
+    {
+        foreach (CharacterController controller in controllers)
+        {
+            if (ConnectedControllerGrounded(controller))
+            {
+                controller.Move(movementVector);
+            }         
         }
     }
 
@@ -83,42 +95,11 @@ public class DynamicMover : MonoBehaviour
         }
     }
 
-    private void MoveRiders()
+    private bool ConnectedControllerGrounded(CharacterController controller)
     {
-        foreach (CharacterController controller in controllers)
-        {
-            controller.Move(moverRB.velocity * Time.fixedDeltaTime);
-        }
-    }
+        float verticalDistance = (controller.transform.position.y - (controller.height / 2 + controller.skinWidth)) - moverRB.position.y;
 
-    private void AdjustRiderPosition()
-    {
-        foreach (CharacterController controller in controllers)
-        {
-            float adjustedControllerY = controller.transform.position.y - (controller.height / 2 + controller.skinWidth);
-            float heightDifference = adjustedControllerY - transform.position.y;
-
-            if (heightDifference < 0.5)
-            {
-                controller.Move(transform.up * -heightDifference);
-            }
-
-            
-        }
-    }
-
-    private void MoveRidersAfter()
-    {
-        foreach (CharacterController controller in controllers)
-        {
-
-            float relativeControllerY = controller.transform.position.y - (controller.height / 2 + controller.skinWidth);
-            float moveDistanceY = transform.position.y - relativeControllerY;
-
-            Vector3 moveVector = new Vector3(moverRB.velocity.x * Time.fixedDeltaTime, moveDistanceY, moverRB.velocity.z * Time.fixedDeltaTime);
-
-            controller.Move(moveVector);
-        }
+        return verticalDistance < objectGroundedDistance;
     }
 
     private void DetermineJourneyLength()
