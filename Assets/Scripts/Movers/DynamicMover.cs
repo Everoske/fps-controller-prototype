@@ -28,6 +28,8 @@ public class DynamicMover : MonoBehaviour
     private Transform previousWaypoint;
     private Transform targetWaypoint;
 
+    private bool platformMovingDown = false;
+
     private List<CharacterController> controllers = new List<CharacterController>();
     private List<Rigidbody> connectedBodies = new List<Rigidbody>();
 
@@ -51,7 +53,10 @@ public class DynamicMover : MonoBehaviour
         else
         {
             TargetNextWaypoint();
-            ApplyCounteractingForce();
+            if (!platformMovingDown)
+            {
+                ApplyCounteractingForce();
+            }
         }
     }
 
@@ -62,7 +67,7 @@ public class DynamicMover : MonoBehaviour
 
         float journeyPercentage = distanceCovered / journeyLength;
 
-        bool platformMovingDown = targetWaypoint.position.y < transform.position.y;
+        platformMovingDown = targetWaypoint.position.y < transform.position.y;
 
         Vector3 movementVector = Vector3.Lerp(previousWaypoint.position, targetWaypoint.position, journeyPercentage);
         Vector3 riderMovement = movementVector - transform.position;
@@ -71,7 +76,10 @@ public class DynamicMover : MonoBehaviour
         {
             MoveRidersBefore(riderMovement);
             moverRB.MovePosition(movementVector);
-            ApplyCounteractingForce();
+            if (Vector3.Distance(targetWaypoint.position, riderMovement) < movementVector.magnitude)
+            {
+                ApplyCounteractingForce();
+            }
         } else
         {
             moverRB.MovePosition(movementVector);
@@ -87,7 +95,6 @@ public class DynamicMover : MonoBehaviour
             {
                 body.AddForce(new Vector3(0f, -body.velocity.y, 0f), ForceMode.VelocityChange);
             }
-            
         }
     }
 
@@ -99,13 +106,6 @@ public class DynamicMover : MonoBehaviour
             {
                 controller.Move(movementVector);
             }         
-        }
-
-        Vector3 bodyMovement = new Vector3(movementVector.x, 0f, movementVector.z);
-
-        foreach (Rigidbody body in connectedBodies)
-        {
-            //body.Move(body.position + bodyMovement, body.rotation);
         }
     }
 

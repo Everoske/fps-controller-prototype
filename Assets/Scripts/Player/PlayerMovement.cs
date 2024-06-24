@@ -130,7 +130,7 @@ namespace FPSPrototype.Player
 
         [Header("RigidBody Interactions")]
         [SerializeField]
-        private float playerForceMultiplier = 200f;
+        private float playerForceMultiplier = 5f;
 
         private CharacterController characterController;
 
@@ -628,6 +628,8 @@ namespace FPSPrototype.Player
 
             if (Physics.Raycast(lowerOrigin, moveDirection.normalized, out RaycastHit lowerHit, rayDistance, collisionMask, QueryTriggerInteraction.Ignore))
             {
+                if (lowerHit.transform.TryGetComponent<Rigidbody>(out Rigidbody rb)) return;
+
                 float stepSlopeAngle = Vector3.Angle(lowerHit.normal, transform.up);
 
                 if (stepSlopeAngle >= maxSlopeAngle)
@@ -657,7 +659,7 @@ namespace FPSPrototype.Player
 
                 Vector3 pushDirection = new Vector3(hit.moveDirection.x, 0, hit.moveDirection.z);
 
-                body.AddForce(pushDirection * targetSpeed * Time.deltaTime * playerForceMultiplier);
+                body.AddForce(pushDirection * targetSpeed * Time.deltaTime * playerForceMultiplier, ForceMode.Impulse);
             }
         }
 
