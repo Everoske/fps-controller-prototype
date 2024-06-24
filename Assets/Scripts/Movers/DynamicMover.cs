@@ -29,6 +29,7 @@ public class DynamicMover : MonoBehaviour
     private Transform targetWaypoint;
 
     private List<CharacterController> controllers = new List<CharacterController>();
+    private List<Rigidbody> connectedBodies = new List<Rigidbody>();
 
     private void Awake()
     {
@@ -50,6 +51,7 @@ public class DynamicMover : MonoBehaviour
         else
         {
             TargetNextWaypoint();
+            ApplyCounteractingForce();
         }
     }
 
@@ -69,10 +71,23 @@ public class DynamicMover : MonoBehaviour
         {
             MoveRidersBefore(riderMovement);
             moverRB.MovePosition(movementVector);
+            ApplyCounteractingForce();
         } else
         {
             moverRB.MovePosition(movementVector);
             MoveRiders(riderMovement);
+        }
+    }
+
+    private void ApplyCounteractingForce()
+    {
+        foreach (Rigidbody body in connectedBodies)
+        {
+            if (body.velocity.y > 0)
+            {
+                body.AddForce(new Vector3(0f, -body.velocity.y, 0f), ForceMode.VelocityChange);
+            }
+            
         }
     }
 
@@ -85,6 +100,13 @@ public class DynamicMover : MonoBehaviour
                 controller.Move(movementVector);
             }         
         }
+
+        Vector3 bodyMovement = new Vector3(movementVector.x, 0f, movementVector.z);
+
+        foreach (Rigidbody body in connectedBodies)
+        {
+            //body.Move(body.position + bodyMovement, body.rotation);
+        }
     }
 
     private void MoveRiders(Vector3 movementVector)
@@ -92,6 +114,11 @@ public class DynamicMover : MonoBehaviour
         foreach (CharacterController controller in controllers)
         {
             controller.Move(movementVector);
+        }
+
+        foreach (Rigidbody body in connectedBodies)
+        {
+            body.Move(body.position + movementVector, body.rotation);
         }
     }
 
@@ -124,6 +151,10 @@ public class DynamicMover : MonoBehaviour
         if (other.TryGetComponent<CharacterController>(out CharacterController controller))
         {
             controllers.Add(controller);
+        } 
+        else if (other.TryGetComponent<Rigidbody>(out Rigidbody otherRigidbody))
+        {
+            connectedBodies.Add(otherRigidbody);
         }
     }
 
@@ -132,6 +163,10 @@ public class DynamicMover : MonoBehaviour
         if (other.TryGetComponent<CharacterController>(out CharacterController controller))
         {
             controllers.Remove(controller);
+        }
+        else if (other.TryGetComponent<Rigidbody>(out Rigidbody otherRigidbody))
+        {
+            connectedBodies.Remove(otherRigidbody);
         }
     }
 }

@@ -10,6 +10,7 @@ public class StaticRotator : MonoBehaviour
     private Rigidbody moverRB;
 
     private List<CharacterController> controllers = new List<CharacterController>();
+    private List<Rigidbody> connectedBodies = new List<Rigidbody>();
 
     private void Awake()
     {
@@ -42,6 +43,9 @@ public class StaticRotator : MonoBehaviour
         if (other.TryGetComponent<CharacterController>(out CharacterController controller))
         {
             controllers.Add(controller);
+        } else if (other.TryGetComponent<Rigidbody>(out Rigidbody rb))
+        {
+            connectedBodies.Add(rb);
         }
     }
 
@@ -50,6 +54,10 @@ public class StaticRotator : MonoBehaviour
         if (other.TryGetComponent<CharacterController>(out CharacterController controller))
         {
             controllers.Remove(controller);
+        }
+        else if (other.TryGetComponent<Rigidbody>(out Rigidbody rb))
+        {
+            connectedBodies.Remove(rb);
         }
     }
 }
