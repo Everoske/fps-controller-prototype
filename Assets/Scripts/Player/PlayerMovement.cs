@@ -628,7 +628,10 @@ namespace FPSPrototype.Player
 
             if (Physics.Raycast(lowerOrigin, moveDirection.normalized, out RaycastHit lowerHit, rayDistance, collisionMask, QueryTriggerInteraction.Ignore))
             {
-                if (lowerHit.transform.TryGetComponent<Rigidbody>(out Rigidbody rb)) return;
+                if (lowerHit.transform.TryGetComponent<Rigidbody>(out Rigidbody rb)) 
+                {
+                    if (!rb.isKinematic) return;
+                }
 
                 float stepSlopeAngle = Vector3.Angle(lowerHit.normal, transform.up);
 
@@ -680,6 +683,12 @@ namespace FPSPrototype.Player
                 Gizmos.DrawRay(rayPosition, transform.forward);
             }
         }
+
+        public void ApplyExternalMovement(Vector3 externalMovement) => characterController.Move(externalMovement);
+
+        public float GetStandingHeight() => standingHeight;
+
+        public float GetDistanceToGround() => standingHeight / 2 + characterController.skinWidth;
     }
 
     public struct MovementInputs

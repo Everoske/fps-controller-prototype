@@ -1,3 +1,4 @@
+using FPSPrototype.Player;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -15,7 +16,7 @@ public class DynamicMover : MonoBehaviour
 
     [Tooltip("Threshold for which an object on the moving platform is considered grounded")]
     [SerializeField]
-    private float objectGroundedDistance = 1f;
+    private float groundedTolerance = 0.05f;
 
     private Rigidbody moverRB;
 
@@ -30,7 +31,7 @@ public class DynamicMover : MonoBehaviour
 
     private bool platformMovingDown = false;
 
-    private List<CharacterController> controllers = new List<CharacterController>();
+    private List<PlayerMovement> controllers = new List<PlayerMovement>();
     private List<Rigidbody> connectedBodies = new List<Rigidbody>();
 
     private void Awake()
@@ -100,20 +101,20 @@ public class DynamicMover : MonoBehaviour
 
     private void MoveRidersBefore(Vector3 movementVector)
     {
-        foreach (CharacterController controller in controllers)
+        foreach (PlayerMovement character in controllers)
         {
-            if (ConnectedControllerGrounded(controller))
+            if (ConnectedControllerGrounded(character))
             {
-                controller.Move(movementVector);
+                character.ApplyExternalMovement(movementVector);
             }         
         }
     }
 
     private void MoveRiders(Vector3 movementVector)
     {
-        foreach (CharacterController controller in controllers)
+        foreach (PlayerMovement character in controllers)
         {
-            controller.Move(movementVector);
+            character.ApplyExternalMovement(movementVector);
         }
 
         foreach (Rigidbody body in connectedBodies)
@@ -122,11 +123,12 @@ public class DynamicMover : MonoBehaviour
         }
     }
 
-    private bool ConnectedControllerGrounded(CharacterController controller)
+    private bool ConnectedControllerGrounded(PlayerMovement character)
     {
-        float verticalDistance = (controller.transform.position.y - (controller.height / 2 + controller.skinWidth)) - moverRB.position.y;
+        float verticalDistance = character.transform.position.y - moverRB.position.y;
+        float groundedDistance = character.GetDistanceToGround() + groundedTolerance;
 
-        return verticalDistance < objectGroundedDistance;
+        return verticalDistance < groundedDistance;
     }
 
     private void DetermineJourneyLength()
@@ -148,9 +150,9 @@ public class DynamicMover : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        if (other.TryGetComponent<CharacterController>(out CharacterController controller))
+        if (other.TryGetComponent<PlayerMovement>(out PlayerMovement character))
         {
-            controllers.Add(controller);
+            controllers.Add(character);
         } 
         else if (other.TryGetComponent<Rigidbody>(out Rigidbody otherRigidbody))
         {
@@ -160,9 +162,9 @@ public class DynamicMover : MonoBehaviour
 
     private void OnTriggerExit(Collider other)
     {
-        if (other.TryGetComponent<CharacterController>(out CharacterController controller))
+        if (other.TryGetComponent<PlayerMovement>(out PlayerMovement character))
         {
-            controllers.Remove(controller);
+            controllers.Remove(character);
         }
         else if (other.TryGetComponent<Rigidbody>(out Rigidbody otherRigidbody))
         {
