@@ -1,6 +1,7 @@
 using FPSPrototype.Player;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEditor.Networking.PlayerConnection;
 using UnityEngine;
 
 public class DynamicMover : MonoBehaviour
@@ -16,7 +17,7 @@ public class DynamicMover : MonoBehaviour
 
     [Tooltip("Threshold for which an object on the moving platform is considered grounded")]
     [SerializeField]
-    private float groundedTolerance = 0.05f;
+    private float groundedTolerance = 0.5f;
 
     private Rigidbody moverRB;
 
@@ -33,6 +34,8 @@ public class DynamicMover : MonoBehaviour
 
     private List<PlayerMovement> controllers = new List<PlayerMovement>();
     private List<Rigidbody> connectedBodies = new List<Rigidbody>();
+
+    // TODO: Keep the character at a fixed position above the elevator when calculating player movements
 
     private void Awake()
     {
@@ -103,10 +106,16 @@ public class DynamicMover : MonoBehaviour
     {
         foreach (PlayerMovement character in controllers)
         {
-            if (ConnectedControllerGrounded(character))
+            if (ConnectedControllerGrounded(character, out float groundHeightDifference))
             {
+                //Vector3 adjustedMovement = new Vector3(
+                //    movementVector.x,
+                //    Mathf.Max(0f, movementVector.y - groundHeightDifference),
+                //    movementVector.z);
+
+                //character.ApplyExternalMovement(adjustedMovement);
                 character.ApplyExternalMovement(movementVector);
-            }         
+            } 
         }
     }
 
@@ -115,6 +124,22 @@ public class DynamicMover : MonoBehaviour
         foreach (PlayerMovement character in controllers)
         {
             character.ApplyExternalMovement(movementVector);
+            
+            //if (ConnectedControllerWillBeGrounded(character, movementVector, out float groundHeightDifference))
+            //{
+            //    Debug.Log($"Ground Height Difference: {groundHeightDifference} | Movement Vector Y: {movementVector.y}");
+            //    Vector3 adjustedMovement = new Vector3(
+            //        movementVector.x,
+            //        movementVector.y - groundHeightDifference,
+            //        movementVector.z);
+
+            //    Debug.Log($"Adjusted Y: {adjustedMovement.y} | Not Adjusted Y: {movementVector.y}");
+
+            //    character.ApplyExternalMovement(adjustedMovement);
+            //} else
+            //{
+            //    character.ApplyExternalMovement(movementVector);
+            //}
         }
 
         foreach (Rigidbody body in connectedBodies)
@@ -123,10 +148,36 @@ public class DynamicMover : MonoBehaviour
         }
     }
 
-    private bool ConnectedControllerGrounded(PlayerMovement character)
+    private bool ConnectedControllerWillBeGrounded(PlayerMovement character, Vector3 movementVector, out float groundHeightDifference)
     {
+        groundHeightDifference = 0f;
+
+        if (character.CharacterJumping()) return false;
+
+        float verticalDistance = character.transform.position.y - moverRB.position.y - movementVector.y;
+        float groundedDistance = character.GetDistanceToGround() + groundedTolerance;
+
+        if (verticalDistance >= character.GetDistanceToGround() + 0.1f)
+        {
+            groundHeightDifference = verticalDistance - character.GetDistanceToGround() - 0.1f;
+        } 
+
+        return verticalDistance < groundedDistance;
+    }
+
+    private bool ConnectedControllerGrounded(PlayerMovement character, out float groundHeightDifference)
+    {
+        groundHeightDifference = 0f;
+
+        if (character.CharacterJumping()) return false;
+
         float verticalDistance = character.transform.position.y - moverRB.position.y;
         float groundedDistance = character.GetDistanceToGround() + groundedTolerance;
+
+        if (verticalDistance >= character.GetDistanceToGround() + 0.1f)
+        {
+            groundHeightDifference = verticalDistance - character.GetDistanceToGround() - 0.1f;
+        } 
 
         return verticalDistance < groundedDistance;
     }

@@ -34,11 +34,6 @@ namespace FPSPrototype.Player
 
         private void Update()
         {
-
-            // Process Look Input
-            playerLook.ProcessLook(playerActions.Player.Look.ReadValue<Vector2>());
-            playerLook.MoveCamera();
-
             // Process Movement Input
             MovementInputs movementInputs = new MovementInputs();
             movementInputs.sprintHeld = playerActions.Player.Sprint.IsPressed();
@@ -55,7 +50,9 @@ namespace FPSPrototype.Player
 
         private void LateUpdate()
         {
-            
+            // Process Look Input
+            playerLook.ProcessLook(playerActions.Player.Look.ReadValue<Vector2>());
+            playerLook.MoveCamera();
 
             // TODO: Remove. For dev only. 
             if (transform.position.y < -300)

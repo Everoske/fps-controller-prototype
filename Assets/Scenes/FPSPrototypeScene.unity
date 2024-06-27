@@ -6643,7 +6643,7 @@ MonoBehaviour:
   path: {fileID: 380101183}
   shouldLoop: 1
   speed: 5
-  objectGroundedDistance: 1
+  groundedTolerance: 0.5
 --- !u!65 &1066548246
 BoxCollider:
   m_ObjectHideFlags: 0

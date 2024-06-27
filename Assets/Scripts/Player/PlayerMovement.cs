@@ -689,6 +689,8 @@ namespace FPSPrototype.Player
         public float GetStandingHeight() => standingHeight;
 
         public float GetDistanceToGround() => standingHeight / 2 + characterController.skinWidth;
+
+        public bool CharacterJumping() => playerHasJumped;
     }
 
     public struct MovementInputs
