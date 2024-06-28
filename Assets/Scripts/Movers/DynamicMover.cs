@@ -1,7 +1,5 @@
 using FPSPrototype.Player;
-using System.Collections;
 using System.Collections.Generic;
-using UnityEditor.Networking.PlayerConnection;
 using UnityEngine;
 
 public class DynamicMover : MonoBehaviour

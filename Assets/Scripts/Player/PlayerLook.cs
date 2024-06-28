@@ -22,12 +22,24 @@ namespace FPSPrototype.Player
         private float ySensitivity = 25f;
         [Tooltip("How many degrees player can look up")]
         [SerializeField]
-        private float maxPitch = 90f;
+        private float maxPitch = 80f;
         [Tooltip("How many degrees player can look down")]
         [SerializeField]
-        private float minPitch = -90f;
+        private float minPitch = -80f;
         [SerializeField]
         private bool inverted = false;
+
+        [Header("Smooth Rotation Settings")]
+        [SerializeField]
+        private Transform lookTarget;
+        [SerializeField]
+        private float smoothTime;
+
+        private float oldYaw;
+        private float oldPitch;
+        private float pitchAngularVelocity;
+        private float horizontalAngularVelocity;
+
 
         private CharacterController characterController;
         private Vector3 initialCameraPosition;
@@ -36,7 +48,8 @@ namespace FPSPrototype.Player
         [SerializeField]
         private Camera playerCamera;
 
-        private float totalPitch;
+        private float currentPitch;
+        private float currentYaw;
 
         private void Awake()
         {
@@ -49,6 +62,7 @@ namespace FPSPrototype.Player
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+            lookTarget.localRotation = transform.localRotation;
         }
 
         /// <summary>
@@ -57,22 +71,21 @@ namespace FPSPrototype.Player
         /// <param name="look">Vector2 representing the player's look input</param>
         public void ProcessLook(Vector2 look)
         {
-            float lookX = look.x * xSensitivity * Time.deltaTime;
-            float lookY = look.y * ySensitivity * Time.deltaTime;
+            float lookX = look.x * xSensitivity;
+            float lookY = look.y * ySensitivity;
 
             if (!inverted)
             {
-                totalPitch -= lookY;
+                currentPitch -= lookY;
             }
             else
             {
-                totalPitch += lookY;
+                currentPitch += lookY;
             }
-            
 
-            totalPitch = Mathf.Clamp(totalPitch, minPitch, maxPitch);
+            currentPitch = Mathf.Clamp(currentPitch, minPitch, maxPitch);
 
-            playerCamera.transform.localRotation = Quaternion.Euler(totalPitch, 0f, 0f);
+            playerCamera.transform.localRotation = Quaternion.Euler(currentPitch, 0f, 0f);
 
             transform.Rotate(Vector3.up * lookX);
         }
@@ -86,6 +99,11 @@ namespace FPSPrototype.Player
             Vector3 desiredCameraPosition = initialCameraPosition - halfHeightDifference;
 
             playerCamera.transform.localPosition = desiredCameraPosition;
+        }
+
+        private float ClampAngle(float angle)
+        {
+            return angle < 0f ? -1 * angle % 360f : angle % 360f;
         }
     }
 }
